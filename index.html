@@ -1,0 +1,2637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Jim's Prospector</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #000;
+    --card: rgba(255, 255, 255, 0.04);
+    --card-hover: rgba(255, 255, 255, 0.07);
+    --border: rgba(255, 255, 255, 0.10);
+    --border-soft: rgba(255, 255, 255, 0.06);
+    --text: #fff;
+    --text-dim: rgba(235, 235, 245, 0.7);
+    --text-mute: rgba(235, 235, 245, 0.4);
+    --orange: #FF7A00;
+    --orange-light: #FFA500;
+    --orange-glow: #FF9500;
+    --orange-grad: linear-gradient(135deg, #FF7A00 0%, #FFA500 100%);
+    --blue: #0091FF;
+    --blue-light: #4DB8FF;
+    --blue-grad: linear-gradient(135deg, #0066FF 0%, #00B4FF 100%);
+    --check: #30D158;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    background: #000; color: var(--text);
+    overflow: hidden; -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background:
+      radial-gradient(1200px 600px at 0% 0%, rgba(255,122,0,0.10) 0%, transparent 50%),
+      radial-gradient(900px 500px at 100% 100%, rgba(0,145,255,0.08) 0%, transparent 50%),
+      #000;
+    display: flex; flex-direction: column;
+  }
+  header {
+    flex: 0 0 auto;
+    min-height: 50px;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+    padding-bottom: 0;
+    box-sizing: content-box;
+    display: flex; align-items: center; justify-content: space-between;
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    background: rgba(0,0,0,0.55);
+    border-bottom: 0.5px solid var(--border);
+    z-index: 1000;
+    gap: 8px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+  .logo {
+    width: 34px; height: 34px;
+    background: var(--orange-grad);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 10px rgba(255,122,0,0.35);
+    flex-shrink: 0;
+    padding: 3px;
+  }
+  .logo-img {
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    object-fit: contain;
+  }
+  .brand-text { min-width: 0; overflow: hidden; }
+  .brand h1 {
+    font-size: 17px; font-weight: 700; letter-spacing: -0.02em;
+    background: linear-gradient(180deg, #fff 0%, #d1d1d6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    line-height: 1.1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .brand .tag {
+    font-size: 10px; color: var(--text-mute);
+    letter-spacing: 0.10em; text-transform: uppercase; margin-top: 1px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  main { flex: 1; display: flex; overflow: hidden; min-height: 0; overscroll-behavior: contain; }
+  .sidebar {
+    flex: 0 0 280px;
+    background: rgba(20,20,22,0.7);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-right: 0.5px solid var(--border);
+    padding: 20px 18px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .sidebar h3 {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.10em;
+    color: var(--text-mute); margin-bottom: 10px;
+  }
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .button-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .button-row .btn { width: 100%; padding: 11px 10px; font-size: 12.5px; }
+  /* Address input + locate icon button side-by-side */
+  .address-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+  }
+  .address-row .input { padding: 9px 11px; font-size: 12.5px; }
+  .locate-btn {
+    background: linear-gradient(135deg, rgba(0,145,255,0.15) 0%, rgba(0,102,255,0.05) 100%);
+    border: 1px solid rgba(0,145,255,0.35);
+    color: #4DB8FF;
+    font-weight: 600;
+    padding: 0 12px;
+    min-width: 42px;
+    font-size: 16px;
+  }
+  .locate-btn:hover {
+    background: linear-gradient(135deg, rgba(0,145,255,0.22) 0%, rgba(0,102,255,0.08) 100%);
+    border-color: rgba(0,145,255,0.50);
+  }
+  /* Filters + Reset side-by-side row */
+  .controls-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    align-items: start;
+  }
+  .controls-row .filter-btn {
+    padding: 8px 11px;
+    font-size: 12px;
+  }
+  .controls-row .filter-btn-arrow { font-size: 11px; }
+  .reset-btn-compact {
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  /* Radius slider + Route Planner button side-by-side */
+  .radius-route-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+  .radius-route-row .radius-section {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .route-open-btn.route-open-compact {
+    display: inline-flex;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: auto;
+    padding: 6px 10px;
+    gap: 6px;
+    border-radius: 8px;
+  }
+  .route-open-compact .route-open-icon { display: none; }
+  .route-open-compact .route-open-text {
+    display: inline;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(77, 184, 255, 0.95);
+    line-height: 1;
+    text-transform: none;
+  }
+  .route-open-compact .route-open-badge {
+    margin: 0;
+    padding: 1px 6px;
+    font-size: 10px;
+    min-width: 14px;
+  }
+  /* Route Planner entry button */
+  .route-open-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px 14px;
+    background: linear-gradient(135deg, rgba(0,145,255,0.18) 0%, rgba(0,102,255,0.06) 100%);
+    border: 1px solid rgba(0,145,255,0.40);
+    color: #4DB8FF;
+    border-radius: 12px;
+    font-size: 13.5px;
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .route-open-btn:hover {
+    background: linear-gradient(135deg, rgba(0,145,255,0.25) 0%, rgba(0,102,255,0.10) 100%);
+    border-color: rgba(0,145,255,0.55);
+  }
+  .route-open-btn:active { transform: scale(0.98); }
+  .route-open-label { flex: 1; }
+  .route-open-badge {
+    background: var(--blue);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 800;
+    min-width: 22px;
+    text-align: center;
+  }
+  .route-open-arrow { font-size: 16px; opacity: 0.7; }
+  /* Full-screen route overlay */
+  .route-overlay {
+    position: fixed;
+    inset: 0;
+    background: #0a0a0c;
+    display: flex;
+    flex-direction: column;
+    z-index: 5000;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility: hidden;
+  }
+  .route-overlay.visible {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  .route-overlay-header {
+    flex: 0 0 auto;
+    min-height: 50px;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+    box-sizing: content-box;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .back-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .back-btn:hover { background: rgba(255,255,255,0.14); }
+  .back-btn:active { transform: scale(0.96); }
+  .route-overlay-title { flex: 1; min-width: 0; }
+  .route-overlay-title h2 {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    background: linear-gradient(180deg, #fff 0%, #d1d1d6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    line-height: 1.1;
+  }
+  .overlay-subtitle {
+    font-size: 11px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+  }
+  .route-overlay-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px max(18px, env(safe-area-inset-left, 0px));
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  .route-overlay-help {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 10px;
+    border: 1px solid var(--border-soft);
+  }
+  .route-overlay-help strong { color: var(--blue-light); }
+  .route-overlay-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .route-overlay-actions #route-export { padding: 14px 14px; font-size: 14.5px; }
+  .route-overlay-actions .btn { padding: 11px 14px; font-size: 13px; }
+  .input {
+    width: 100%; padding: 11px 13px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-soft);
+    color: var(--text);
+    border-radius: 10px;
+    font-size: 13px; font-family: inherit;
+    transition: all 0.15s;
+  }
+  .input::placeholder { color: var(--text-mute); }
+  .input:focus { outline: none; border-color: var(--orange); background: rgba(255,255,255,0.09); }
+  .slider-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .slider-row .val {
+    font-size: 18px; font-weight: 700;
+    background: var(--orange-grad);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  .slider-row .val .unit {
+    font-size: 11px; color: var(--text-mute); margin-left: 2px;
+    -webkit-text-fill-color: var(--text-mute); font-weight: 500;
+  }
+  .total-inline {
+    font-size: 11px;
+    color: var(--text-mute);
+    -webkit-text-fill-color: var(--text-mute);
+    font-weight: 600;
+    margin-left: 8px;
+    letter-spacing: 0.02em;
+  }
+  .total-inline::before { content: '· '; opacity: 0.5; }
+  .visited-inline {
+    margin-left: 6px;
+    color: var(--check);
+    font-weight: 600;
+  }
+  input[type="range"] {
+    width: 100%; height: 4px;
+    -webkit-appearance: none; appearance: none;
+    background: rgba(255,255,255,0.12); border-radius: 2px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    transition: transform 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    cursor: pointer; border: none;
+  }
+  .btn {
+    padding: 10px 14px;
+    border: 1px solid var(--border-soft);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    border-radius: 10px;
+    font-size: 13px; font-family: inherit; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn:hover { background: rgba(255,255,255,0.10); }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled, .btn.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+  .btn.primary {
+    background: var(--orange-grad);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 4px 14px rgba(255,122,0,0.32);
+  }
+  .btn.primary:hover { box-shadow: 0 6px 20px rgba(255,122,0,0.45); }
+  .btn.blue {
+    background: var(--blue-grad);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 4px 14px rgba(0,145,255,0.32);
+  }
+  .btn.blue:hover { box-shadow: 0 6px 20px rgba(0,145,255,0.45); }
+  .btn.full { width: 100%; }
+  .btn.sm { padding: 6px 10px; font-size: 11.5px; border-radius: 7px; }
+  .btn.danger:hover { color: var(--orange); border-color: var(--orange); }
+  .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  /* Filter dropdown — custom <details> element, inline expansion (no popover positioning) */
+  .filter-details {
+    min-width: 0;
+    align-self: start;
+  }
+  .filter-summary {
+    list-style: none;
+    padding: 8px 11px;
+    background: #2a2a2c;
+    border: 1px solid var(--border-soft);
+    color: var(--text);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .filter-summary::-webkit-details-marker { display: none; }
+  .filter-summary::marker { display: none; }
+  .filter-summary:hover { background: #353537; }
+  .filter-summary-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filter-arrow { font-size: 11px; opacity: 0.7; transition: transform 0.2s; flex-shrink: 0; }
+  .filter-details[open] .filter-arrow { transform: rotate(180deg); }
+  .filter-options {
+    margin-top: 4px;
+    background: #1c1c1e;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .filter-option {
+    padding: 9px 12px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    text-align: left;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 7px;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+  }
+  .filter-option:hover { background: rgba(255,255,255,0.10); }
+  .filter-option.active {
+    background: var(--orange-grad);
+    color: #fff;
+  }
+  .chip {
+    padding: 7px 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid transparent;
+    color: var(--text-dim);
+    border-radius: 8px;
+    font-size: 12px; font-family: inherit; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .chip:hover { color: var(--text); }
+  .chip.active {
+    background: var(--orange-grad); color: #fff;
+    box-shadow: 0 2px 10px rgba(255,122,0,0.3);
+  }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border-soft);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .stat-card .num {
+    font-size: 22px; font-weight: 700; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-card .num.orange {
+    background: var(--orange-grad);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .stat-card .num.blue {
+    background: var(--blue-grad);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .stat-card .label {
+    font-size: 10px; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px;
+  }
+  /* Route planner */
+  .route-section {
+    background: linear-gradient(135deg, rgba(0,145,255,0.08) 0%, rgba(0,102,255,0.04) 100%);
+    border: 1px solid rgba(0,145,255,0.25);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .route-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .route-header .title {
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--blue-light);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .route-stops {
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 220px; overflow-y: auto;
+    margin-bottom: 8px;
+  }
+  .route-stop {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11.5px;
+  }
+  /* Start-of-route fixed entry */
+  .route-stop-start {
+    background: rgba(0, 145, 255, 0.10);
+    border: 1px solid rgba(0, 145, 255, 0.28);
+    padding: 8px 10px;
+    margin-bottom: 2px;
+  }
+  .route-stop-start .start-num {
+    width: 22px; height: 22px;
+    font-size: 13px;
+  }
+  .route-stop-start .start-name {
+    flex: 1; min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.2;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .route-stop-start .start-label {
+    font-size: 9.5px;
+    color: var(--blue-light);
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+  }
+  .route-stop-start .start-addr {
+    color: var(--text);
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .route-stop .num {
+    background: var(--blue);
+    color: #fff;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 10px;
+    flex-shrink: 0;
+  }
+  .route-stop .name {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--text);
+  }
+  .route-stop button {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-soft);
+    color: var(--text-dim);
+    cursor: pointer;
+    width: 32px; height: 32px;
+    border-radius: 7px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .route-stop button:hover:not(:disabled) {
+    background: rgba(255,255,255,0.13);
+    color: var(--text);
+    border-color: rgba(255,255,255,0.18);
+  }
+  .route-stop button:active:not(:disabled) { transform: scale(0.94); }
+  .route-stop button:disabled { opacity: 0.25; cursor: not-allowed; }
+  .route-stop button.remove { color: rgba(255,122,0,0.85); font-size: 18px; line-height: 1; }
+  .route-stop button.remove:hover:not(:disabled) {
+    background: rgba(255,122,0,0.18);
+    border-color: var(--orange);
+    color: var(--orange-light);
+  }
+  .route-empty {
+    font-size: 11px; color: var(--text-mute);
+    text-align: center; padding: 8px 4px; line-height: 1.4;
+  }
+  .content { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .map-wrap { flex: 1 1 65%; min-height: 320px; position: relative; background: #15171c; }
+  #map { width: 100%; height: 100%; background: #15171c; }
+  .leaflet-container {
+    background: #15171c !important; font-family: inherit;
+    height: 100% !important; width: 100% !important;
+  }
+  body.osm-dark-filter .leaflet-tile {
+    filter: invert(0.92) hue-rotate(200deg) brightness(0.95) saturate(0.55) contrast(0.92);
+  }
+  .leaflet-control-attribution {
+    background: rgba(0,0,0,0.6) !important;
+    color: var(--text-mute) !important;
+    font-size: 9px !important;
+    padding: 2px 6px !important;
+    border-radius: 6px !important;
+    margin: 6px !important;
+  }
+  .leaflet-control-attribution a { color: var(--text-dim) !important; }
+  .leaflet-control-zoom a {
+    background: rgba(28,28,30,0.85) !important;
+    color: #fff !important;
+    border: 0.5px solid var(--border) !important;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .leaflet-control-zoom a:hover { background: rgba(44,44,46,0.95) !important; }
+  .leaflet-popup-content-wrapper {
+    background: rgba(28,28,30,0.95);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    color: var(--text);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+  }
+  .leaflet-popup-tip { background: rgba(28,28,30,0.95) !important; }
+  .leaflet-popup-content { margin: 12px 14px; font-size: 12.5px; line-height: 1.5; }
+  .leaflet-popup-content .pop-name { font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .leaflet-popup-content .pop-chain {
+    font-size: 10px; color: var(--orange-light);
+    text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 6px;
+  }
+  .leaflet-popup-content .pop-meta { color: var(--text-dim); }
+  .leaflet-popup-content a { color: var(--orange-light); text-decoration: none; }
+  .map-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 500; pointer-events: none;
+  }
+  .map-overlay.visible { display: flex; }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid rgba(255,255,255,0.12);
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .map-overlay .msg { margin-top: 14px; color: var(--text-dim); font-size: 13px; }
+  .map-overlay .container { text-align: center; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .list-wrap {
+    flex: 1 1 35%; min-height: 180px;
+    border-top: 0.5px solid var(--border);
+    background: rgba(10,10,12,0.5);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .list-header {
+    padding: 12px 22px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 0.5px solid var(--border-soft);
+    flex-shrink: 0; gap: 10px;
+  }
+  .list-header h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; display: inline-block; }
+  .list-header .count { font-size: 12px; color: var(--text-mute); margin-left: 8px; font-weight: 500; }
+  .search-mini {
+    padding: 7px 12px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 12.5px; font-family: inherit;
+    width: 220px;
+    transition: all 0.15s;
+  }
+  .search-mini:focus { outline: none; background: rgba(255,255,255,0.10); border-color: var(--orange); }
+  .list { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 22px max(22px, env(safe-area-inset-bottom, 0px)); flex: 1; }
+  .list::-webkit-scrollbar { width: 8px; }
+  .list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+  .group { margin-bottom: 20px; }
+  .group-title { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .group-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+  .group-title .name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  .group-title .multi-badge {
+    font-size: 10px; background: rgba(255,122,0,0.20);
+    color: var(--orange-light);
+    padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase; font-weight: 700; letter-spacing: 0.06em;
+  }
+  .group-title .grp-count { margin-left: auto; font-size: 11px; color: var(--text-mute); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 12px 14px;
+    transition: all 0.18s;
+  }
+  .card:hover { background: var(--card-hover); transform: translateY(-1px); border-color: rgba(255,255,255,0.14); }
+  .card.checked {
+    background: linear-gradient(135deg, rgba(48,209,88,0.10) 0%, rgba(48,209,88,0.04) 100%);
+    border-color: rgba(48,209,88,0.35);
+  }
+  .card.in-route {
+    background: linear-gradient(135deg, rgba(0,145,255,0.08) 0%, rgba(0,145,255,0.03) 100%);
+    border-color: rgba(0,145,255,0.4);
+  }
+  .card-head { display: flex; gap: 10px; margin-bottom: 8px; }
+  .checkbox {
+    width: 22px; height: 22px;
+    border: 1.5px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    flex-shrink: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; margin-top: 1px;
+  }
+  .checkbox:hover { border-color: var(--check); }
+  .checkbox.checked { background: var(--check); border-color: var(--check); }
+  .checkbox.checked::after {
+    content: ''; width: 5px; height: 9px;
+    border: solid #000; border-width: 0 2px 2px 0;
+    transform: rotate(45deg); margin-top: -2px;
+  }
+  .visited-btn {
+    flex-shrink: 0;
+    align-self: flex-start;
+    padding: 5px 11px;
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid rgba(255,255,255,0.20);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-size: 10.5px;
+    font-weight: 700;
+    font-family: inherit;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .visited-btn:hover {
+    background: rgba(48, 209, 88, 0.12);
+    border-color: rgba(48, 209, 88, 0.45);
+    color: var(--check);
+  }
+  .visited-btn:active { transform: scale(0.96); }
+  .visited-btn.visited {
+    background: var(--check);
+    border-color: var(--check);
+    color: #000;
+  }
+  .visited-btn.visited:hover { filter: brightness(0.95); }
+  .card-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.3; cursor: pointer; }
+  .card-name:hover { color: var(--orange-light); }
+  .card-meta { font-size: 12px; color: var(--text-dim); line-height: 1.55; }
+  .card-meta .row { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 2px; }
+  .card-meta .row .icn { width: 12px; color: var(--text-mute); font-size: 10px; margin-top: 4px; flex-shrink: 0; }
+  .card-meta a { color: var(--text-dim); text-decoration: none; }
+  .card-meta a:hover { color: var(--orange-light); }
+  .card-actions { display: flex; gap: 6px; margin-top: 10px; padding-left: 32px; flex-wrap: wrap; }
+  .card-actions .btn.in-route {
+    background: var(--blue-grad); border-color: transparent; color: #fff;
+  }
+  .notes-input {
+    width: calc(100% - 32px);
+    margin: 8px 0 0 32px; padding: 7px 9px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border-soft);
+    color: var(--text);
+    border-radius: 7px;
+    font-size: 11.5px; font-family: inherit;
+    resize: vertical; min-height: 26px;
+  }
+  .notes-input:focus { outline: none; border-color: var(--orange-light); }
+  .notes-input::placeholder { color: var(--text-mute); }
+  .marker-pin {
+    width: 24px; height: 24px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    border: 2px solid #fff;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+    position: relative;
+  }
+  .marker-pin.checked::after {
+    content: '✓'; position: absolute;
+    transform: rotate(45deg);
+    top: 0px; left: 4px;
+    color: #fff; font-size: 14px; font-weight: 900;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  }
+  .marker-pin.in-route::before {
+    content: attr(data-num);
+    position: absolute;
+    transform: rotate(45deg);
+    top: -8px; right: -8px;
+    background: var(--blue);
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    font-size: 11px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .center-pin {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--orange-grad);
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 4px rgba(255,122,0,0.25), 0 4px 12px rgba(255,122,0,0.5);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(255,122,0,0.25), 0 4px 12px rgba(255,122,0,0.5); }
+    50% { box-shadow: 0 0 0 10px rgba(255,122,0,0.05), 0 4px 12px rgba(255,122,0,0.5); }
+  }
+  .empty { text-align: center; color: var(--text-mute); padding: 50px 20px; font-size: 13px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(28,28,30,0.95);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 0.5px solid var(--border);
+    color: #fff;
+    padding: 12px 20px; border-radius: 100px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    opacity: 0; transition: all 0.3s;
+    z-index: 9999; pointer-events: none;
+    max-width: 80%;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { color: var(--orange-light); }
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  }
+  .modal.visible { display: flex; }
+  .modal-content {
+    background: rgba(28,28,30,0.98);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 0.5px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .modal h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+  .modal .modal-help { font-size: 12px; color: var(--text-mute); line-height: 1.45; margin-bottom: 8px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  @media (max-width: 900px) {
+    main {
+      flex-direction: column;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sidebar {
+      flex: 0 0 auto;
+      max-height: none;
+      border-right: none;
+      border-bottom: 0.5px solid var(--border);
+      padding: 12px 14px;
+      gap: 12px;
+      overflow: visible;
+    }
+    .sidebar h3 { font-size: 10px; margin-bottom: 4px; letter-spacing: 0.08em; }
+    .sidebar .input { padding: 9px 11px; font-size: 13px; }
+    .button-row .btn { padding: 10px 8px; font-size: 12px; }
+    .locate-btn { padding: 9px 10px; font-size: 12.5px; }
+    .slider-row .val { font-size: 18px; }
+    .filter-grid-2x2 { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .chip { padding: 8px 6px; font-size: 12px; }
+    .stat-card { padding: 8px 10px; }
+    .stat-card .num { font-size: 18px; }
+    .sidebar-footer { margin-top: 4px !important; }
+    .sidebar-footer > div:first-child { display: none; }
+    .sidebar-footer #reset-btn { padding: 8px 10px; font-size: 12px; }
+    .content { flex: 0 0 auto; }
+    .map-wrap { flex: 0 0 auto; height: 35vh; min-height: 220px; }
+    .list-wrap { flex: 0 0 auto; overflow: visible; }
+    .list { overflow: visible; padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); }
+    .search-mini { width: 210px; padding: 9px 13px; font-size: 13.5px; }
+    .list-header { flex-wrap: nowrap; gap: 6px; padding: 10px 14px; }
+    .list-header h2 { font-size: 14px; }
+    .list-header .count { font-size: 10.5px; margin-left: 0; display: block; line-height: 1.3; margin-top: 1px; }
+    .list-header > div:first-child { min-width: 0; flex: 1 1 auto; overflow: hidden; }
+    header {
+      min-height: 46px;
+      padding-left: max(10px, env(safe-area-inset-left, 0px));
+      padding-right: max(10px, env(safe-area-inset-right, 0px));
+      gap: 6px;
+    }
+    .logo { width: 30px; height: 30px; padding: 2px; border-radius: 7px; }
+    .brand h1 { font-size: 15px; }
+    .brand .tag { display: none; }
+    .header-actions .btn-label { display: none; }
+    .header-actions .btn.sm { padding: 6px 9px; font-size: 13px; }
+    .cards { grid-template-columns: 1fr; }
+    .route-overlay-content { padding: 14px max(14px, env(safe-area-inset-left, 0px)); }
+    .route-overlay-title h2 { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">
+      <img src="data:image/png;base64,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" alt="Pickaxe" class="logo-img" />
+    </div>
+    <div class="brand-text">
+      <h1>Jim's Prospector</h1>
+      <div class="tag">Hearing Centers · Field Tracker</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn sm" id="export-csv">↓ <span class="btn-label">CSV</span></button>
+    <button class="btn sm primary" id="save-btn">💾 <span class="btn-label">Save</span></button>
+  </div>
+</header>
+
+<main>
+  <aside class="sidebar">
+    <div class="input-group">
+      <h3>Starting Address</h3>
+      <div class="address-row">
+        <input type="text" class="input" id="address-input"
+               placeholder="Address, city, or ZIP…"
+               value="Vestavia Hills, AL">
+        <button class="btn locate-btn" id="locate-btn" title="Use my current location" aria-label="Use my current location">📍</button>
+      </div>
+      <div class="button-row" style="margin-top: 6px;">
+        <button class="btn primary" id="find-btn">
+          🔍 Find Centers
+        </button>
+        <button class="btn" id="add-btn">
+          ＋ Add Manually
+        </button>
+      </div>
+    </div>
+
+    <div class="radius-section">
+      <div class="slider-row">
+        <h3 style="margin-bottom: 0;">Radius</h3>
+        <div class="val">
+          <span id="radius-val">30</span><span class="unit">mi</span>
+          <span class="total-inline"><span id="stat-total">0</span> total</span>
+        </div>
+      </div>
+      <input type="range" id="radius-slider" min="0" max="100" step="1" value="30">
+    </div>
+
+    <div class="controls-row">
+      <details class="filter-details" id="filter-details">
+        <summary class="filter-summary">
+          <span class="filter-summary-text"><span style="opacity:0.65;">Filter:</span> <span id="filter-current">All</span></span>
+          <span class="filter-arrow">▾</span>
+        </summary>
+        <div class="filter-options">
+          <button type="button" class="filter-option" data-filter="all">All locations</button>
+          <button type="button" class="filter-option" data-filter="chains">Chains only</button>
+          <button type="button" class="filter-option" data-filter="unchecked">Not visited</button>
+          <button type="button" class="filter-option" data-filter="checked">Visited</button>
+        </div>
+      </details>
+      <button class="btn danger reset-btn-compact" id="reset-btn" title="Reset all visited markers and notes">↺ Reset</button>
+    </div>
+
+    <div class="sidebar-footer" style="margin-top: auto;">
+      <div style="font-size: 10px; color: var(--text-mute); line-height: 1.5;">
+        Alabama: curated dataset · Other states: OpenStreetMap
+      </div>
+    </div>
+  </aside>
+
+  <section class="content">
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="map-overlay" id="map-loading">
+        <div class="container">
+          <div class="spinner"></div>
+          <div class="msg" id="loading-msg">Searching…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="list-wrap">
+      <div class="list-header">
+        <div>
+          <h2>Prospects</h2>
+          <span class="count">
+            <span id="list-count">0 locations</span>
+            <span class="visited-inline">· <span id="stat-checked">0</span> visited</span>
+          </span>
+        </div>
+        <button class="route-open-btn route-open-compact" id="route-open">
+          <span class="route-open-icon">🗺</span>
+          <span class="route-open-text">Route</span>
+          <span class="route-open-badge" id="route-open-badge">0</span>
+        </button>
+        <input type="text" class="search-mini" id="search" placeholder="Search…">
+      </div>
+      <div class="list" id="list"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Route Planner Overlay (full-screen view with back button) -->
+<div class="route-overlay" id="route-overlay">
+  <header class="route-overlay-header">
+    <button class="back-btn" id="route-back">← Back</button>
+    <div class="route-overlay-title">
+      <h2>🗺 Route Planner</h2>
+      <span class="overlay-subtitle" id="route-overlay-count">0 stops</span>
+    </div>
+  </header>
+  <div class="route-overlay-content">
+    <div class="route-overlay-help">
+      Add stops by tapping <strong>＋ Route</strong> on any prospect card. Reorder with the arrows. Open the multi-stop directions in Google Maps when you're ready.
+    </div>
+    <div id="route-stops"></div>
+    <div class="route-overlay-actions">
+      <a id="route-export" class="btn blue full disabled" href="#" target="_blank" rel="noopener noreferrer">
+        🗺 Google Map Route
+      </a>
+      <button class="btn full" id="route-copy" disabled>
+        📋 Copy Maps URL
+      </button>
+      <button class="btn full" id="route-clear" disabled>
+        Clear Route
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="add-modal">
+  <div class="modal-content">
+    <h2>＋ Add Location</h2>
+    <div class="modal-help">For places that didn't show up in the search. Enter the address and we'll geocode it for the map.</div>
+    <div class="input-group">
+      <input type="text" class="input" id="add-name" placeholder="Business name *">
+      <input type="text" class="input" id="add-addr" placeholder="Full address (street, city, state, ZIP) *">
+      <input type="text" class="input" id="add-phone" placeholder="Phone (optional)">
+      <input type="text" class="input" id="add-chain" placeholder="Chain name if applicable (optional)">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="add-cancel">Cancel</button>
+      <button class="btn primary" id="add-submit">Add Location</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const Store = {
+  async get(key) {
+    if (typeof window.storage !== 'undefined') {
+      try { const r = await window.storage.get(key); if (r) return r.value; } catch(e) {}
+    }
+    try { return localStorage.getItem(key); } catch(e) { return null; }
+  },
+  async set(key, value) {
+    if (typeof window.storage !== 'undefined') {
+      try { await window.storage.set(key, value); return; } catch(e) {}
+    }
+    try { localStorage.setItem(key, value); } catch(e) {}
+  }
+};
+
+// Color palette for chain markers (orange/blue rotation)
+const CHAIN_PALETTE = ['#FF7A00', '#0091FF', '#FFA500', '#4DB8FF', '#FF6B00', '#0066FF', '#FFB347', '#00B4FF'];
+
+// Alabama bounding box (approximate)
+const AL_BOUNDS = { minLat: 30.137, maxLat: 35.008, minLng: -88.473, maxLng: -84.889 };
+function isInAlabama(lat, lng) {
+  return lat >= AL_BOUNDS.minLat && lat <= AL_BOUNDS.maxLat &&
+         lng >= AL_BOUNDS.minLng && lng <= AL_BOUNDS.maxLng;
+}
+
+// Georgia bounding box (approximate)
+const GA_BOUNDS = { minLat: 30.357, maxLat: 35.000, minLng: -85.605, maxLng: -80.751 };
+function isInGeorgia(lat, lng) {
+  return lat >= GA_BOUNDS.minLat && lat <= GA_BOUNDS.maxLat &&
+         lng >= GA_BOUNDS.minLng && lng <= GA_BOUNDS.maxLng;
+}
+
+// =========== STATEWIDE ALABAMA DATASET ===========
+const AL_HEARING_CENTERS = [
+  // === Pattillo Balance and Hearing Center (8 locations) ===
+  { id: 'al-pat-1', chain: 'pattillo', chainName: 'Pattillo Balance and Hearing', name: 'Pattillo Balance and Hearing Center', addr: '2523 5th Ave S, Birmingham, AL 35233', phone: '(205) 267-5052', lat: 33.5116873, lng: -86.7935704 },
+  { id: 'al-pat-2', chain: 'pattillo', chainName: 'Pattillo Balance and Hearing', name: 'Pattillo Balance and Hearing Center', addr: '2685 Pelham Pkwy Suite A, Pelham, AL 35124', phone: '(205) 419-0785', lat: 33.3162481, lng: -86.7987356 },
+  { id: 'al-pat-3', chain: 'pattillo', chainName: 'Pattillo Balance and Hearing', name: 'Pattillo Balance and Hearing Center', addr: '1088 9th Ave SW #102, Bessemer, AL 35022', phone: '(205) 267-5080', lat: 33.3765807, lng: -86.9897834 },
+  { id: 'al-pat-4', chain: 'pattillo', chainName: 'Pattillo Balance and Hearing', name: 'Pattillo Balance and Hearing Center', addr: '1960 Gadsden Hwy Ste 100, Birmingham, AL 35235', phone: '(205) 994-6431', lat: 33.6103383, lng: -86.6268534 },
+  { id: 'al-pat-5', chain: 'pattillo', chainName: 'Pattillo Balance and Hearing', name: 'Pattillo Balance and Hearing Center', addr: '1968 US-78, Oxford, AL 36203', phone: '(256) 330-0124', lat: 33.6144408, lng: -85.7898662 },
+  { id: 'al-pat-6', chain: 'pattillo', chainName: 'Pattillo Balance and Hearing', name: 'Pattillo Balance and Hearing Center', addr: '1600 Hwy 78 E, Jasper, AL 35501', phone: '(205) 282-4656', lat: 33.8460305, lng: -87.2561826 },
+  { id: 'al-pat-7', chain: 'pattillo', chainName: 'Pattillo Balance and Hearing', name: 'Pattillo Balance and Hearing Center', addr: '4150 Carmichael Rd Suite A, Montgomery, AL 36106', phone: '(334) 649-3541', lat: 32.3578461, lng: -86.2372631 },
+  { id: 'al-pat-8', chain: 'pattillo', chainName: 'Pattillo Balance and Hearing', name: 'Pattillo Balance and Hearing Center', addr: '1355 Carmichael Way, Montgomery, AL 36106', phone: '(334) 277-9480', lat: 32.3571349, lng: -86.2398831 },
+
+  // === ENT Associates of Alabama (6 locations) ===
+  { id: 'al-ent-1', chain: 'ent_assoc', chainName: 'ENT Associates of Alabama', name: "ENT Associates of Alabama – St. Vincent's", addr: '833 St Vincents Dr #402, Birmingham, AL 35205', phone: '(205) 933-9236', lat: 33.508552, lng: -86.787661 },
+  { id: 'al-ent-2', chain: 'ent_assoc', chainName: 'ENT Associates of Alabama', name: 'ENT Associates of Alabama – Grandview', addr: '3686 Grandview Pkwy Ste 530, Birmingham, AL 35243', phone: '(205) 591-8260', lat: 33.4332054, lng: -86.7191360 },
+  { id: 'al-ent-3', chain: 'ent_assoc', chainName: 'ENT Associates of Alabama', name: 'ENT Associates of Alabama – Hoover', addr: '4501 Southlake Pkwy Ste 200, Hoover, AL 35244', phone: '(205) 985-7393', lat: 33.3595718, lng: -86.7726490 },
+  { id: 'al-ent-4', chain: 'ent_assoc', chainName: 'ENT Associates of Alabama', name: 'ENT Associates of Alabama – Shelby', addr: '644 2nd St NE #107, Alabaster, AL 35007', phone: '(205) 621-2020', lat: 33.2507804, lng: -86.8130285 },
+  { id: 'al-ent-5', chain: 'ent_assoc', chainName: 'ENT Associates of Alabama', name: 'ENT Associates of Alabama – Trussville', addr: '48 Medical Park Dr E #153, Birmingham, AL 35235', phone: '(205) 402-8133', lat: 33.5953482, lng: -86.6679553 },
+  { id: 'al-ent-6', chain: 'ent_assoc', chainName: 'ENT Associates of Alabama', name: 'ENT Associates of Alabama – Cullman', addr: '1948 AL-157, Cullman, AL 35058', phone: '(256) 737-0368', lat: 34.2006864, lng: -86.8060427 },
+
+  // === Beltone Hearing Aid Center (15 locations) ===
+  { id: 'al-bel-1', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '1491 Montgomery Hwy, Vestavia Hills, AL 35216', phone: '(205) 859-0035', lat: 33.4147595, lng: -86.8038210 },
+  { id: 'al-bel-2', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '7018 Gadsden Hwy Ste 104, Trussville, AL 35173', phone: '(205) 670-2481', lat: 33.6352212, lng: -86.5858990 },
+  { id: 'al-bel-3', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '515 E Tennessee St, Florence, AL 35630', phone: '(256) 666-0210', lat: 34.8029504, lng: -87.6700808 },
+  { id: 'al-bel-4', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '2745 Bob Wallace Ave SW Ste G, Huntsville, AL 35805', phone: '(256) 722-5299', lat: 34.7110299, lng: -86.6023938 },
+  { id: 'al-bel-5', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '125 Kelley Blvd, Millbrook, AL 36054', phone: '(334) 442-9078', lat: 32.4952899, lng: -86.3979248 },
+  { id: 'al-bel-6', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Care Center', addr: '15927 AL-69, Joppa, AL 35087', phone: '(256) 344-7116', lat: 34.296764, lng: -86.560548 },
+  { id: 'al-bel-7', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '319 S Sage Ave, Mobile, AL 36606', phone: '(251) 298-1673', lat: 30.674517, lng: -88.114197 },
+  { id: 'al-bel-8', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '1016 6th Ave SE, Decatur, AL 35601', phone: '(256) 666-0228', lat: 34.5920004, lng: -86.9800042 },
+  { id: 'al-bel-9', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Center', addr: '4919 Carmichael Rd, Montgomery, AL 36106', phone: '(334) 442-9579', lat: 32.360197, lng: -86.2221425 },
+  { id: 'al-bel-10', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '151 Hughes Rd Unit C, Madison, AL 35758', phone: '(256) 722-5299', lat: 34.7016844, lng: -86.7419347 },
+  { id: 'al-bel-11', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '1326 Main St Suite 108, Gardendale, AL 35071', phone: '(205) 670-2478', lat: 33.6588694, lng: -86.8130734 },
+  { id: 'al-bel-12', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '1802 US-98 Unit E, Daphne, AL 36526', phone: '(251) 278-0055', lat: 30.6044085, lng: -87.896315 },
+  { id: 'al-bel-13', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '1718 2nd Ave NW Suite C, Cullman, AL 35055', phone: '(256) 666-0208', lat: 34.196247, lng: -86.8546027 },
+  { id: 'al-bel-14', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Aid Center', addr: '2115 Denton Rd #2, Dothan, AL 36303', phone: '(334) 442-9177', lat: 31.2546519, lng: -85.4125526 },
+  { id: 'al-bel-15', chain: 'beltone', chainName: 'Beltone Hearing Aid Center', name: 'Beltone Hearing Center', addr: '2202-B Gateway Dr, Opelika, AL 36801', phone: '(334) 442-9160', lat: 32.62513, lng: -85.4056726 },
+
+  // === Miracle-Ear Hearing Aid Center (10 locations) ===
+  { id: 'al-mir-1', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '2801 John Hawkins Pkwy #125G, Hoover, AL 35244', phone: '(205) 768-1955', lat: 33.3655545, lng: -86.8243009 },
+  { id: 'al-mir-2', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '1930 Edwards Lake Rd #114, Birmingham, AL 35235', phone: '(205) 855-2471', lat: 33.5975624, lng: -86.6471408 },
+  { id: 'al-mir-3', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '7213 Copperfield Dr, Montgomery, AL 36117', phone: '(334) 833-9172', lat: 32.3763757, lng: -86.1704851 },
+  { id: 'al-mir-4', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '6125 University Dr NW Ste A14, Huntsville, AL 35806', phone: '(256) 913-4498', lat: 34.7414663, lng: -86.6745750 },
+  { id: 'al-mir-5', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '2934 Point Mallard Pkwy SE B3, Decatur, AL 35603', phone: '(256) 913-4807', lat: 34.5423348, lng: -86.9199776 },
+  { id: 'al-mir-6', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '815 N McKenzie St Ste A101, Foley, AL 36535', phone: '(251) 980-7573', lat: 30.4146401, lng: -87.6841925 },
+  { id: 'al-mir-7', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '4318 Downtowner Loop N K, Mobile, AL 36609', phone: '(251) 644-6396', lat: 30.6745498, lng: -88.1419368 },
+  { id: 'al-mir-8', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '682 McQueen Smith Rd N, Prattville, AL 36066', phone: '(334) 604-7320', lat: 32.4812534, lng: -86.4195528 },
+  { id: 'al-mir-9', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '4440 W Main St Ste 3, Dothan, AL 36305', phone: '(334) 893-0675', lat: 31.2368402, lng: -85.4590166 },
+  { id: 'al-mir-10', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center', addr: '1888 Ogletree Rd Ste 160, Auburn, AL 36830', phone: '(334) 604-7284', lat: 32.5837695, lng: -85.4382078 },
+
+  // === Audibel Hearing (6 locations) ===
+  { id: 'al-aud-1', chain: 'audibel', chainName: 'Audibel Hearing', name: 'Audibel Hearing Center', addr: '2000 Veterans Memorial Pkwy #1, Tuscaloosa, AL 35404', phone: '(205) 409-4717', lat: 33.1978839, lng: -87.5110694 },
+  { id: 'al-aud-2', chain: 'audibel', chainName: 'Audibel Hearing', name: 'Audibel Hearing Healthcare', addr: '6345 Cottage Hill Rd Ste H, Mobile, AL 36609', phone: '(251) 665-2778', lat: 30.6393447, lng: -88.1891357 },
+  { id: 'al-aud-3', chain: 'audibel', chainName: 'Audibel Hearing', name: 'Hearing Center - Audibel', addr: '1630 2nd Ave SW, Cullman, AL 35055', phone: '(256) 287-5289', lat: 34.161688, lng: -86.833741 },
+  { id: 'al-aud-4', chain: 'audibel', chainName: 'Audibel Hearing', name: 'Hearing Center - Audibel', addr: '22083 US-72 Ste N, Athens, AL 35613', phone: '(256) 278-4649', lat: 34.7829367, lng: -86.9285996 },
+  { id: 'al-aud-5', chain: 'audibel', chainName: 'Audibel Hearing', name: 'Audibel Hearing Center', addr: '222 Moulton St E, Decatur, AL 35601', phone: '(256) 274-4259', lat: 34.6041226, lng: -86.9840049 },
+  { id: 'al-aud-6', chain: 'audibel', chainName: 'Audibel Hearing', name: 'Audibel Hearing Center', addr: '201 Veterans Dr Ste 106, Scottsboro, AL 35768', phone: '(256) 594-1010', lat: 34.6724115, lng: -86.022401 },
+
+  // === HearingLife (4 locations) ===
+  { id: 'al-hl-1', chain: 'hearinglife', chainName: 'HearingLife', name: 'HearingLife of Montgomery AL', addr: '7025 Halcyon Park Dr Suite A, Montgomery, AL 36117', phone: '(334) 694-8847', lat: 32.3438072, lng: -86.1735382 },
+  { id: 'al-hl-2', chain: 'hearinglife', chainName: 'HearingLife', name: 'HearingLife of Auburn AL', addr: '1100 S College St Suite 105, Auburn, AL 36832', phone: '(334) 521-4324', lat: 32.5850345, lng: -85.4903686 },
+  { id: 'al-hl-3', chain: 'hearinglife', chainName: 'HearingLife', name: 'HearingLife of Gadsden AL', addr: '510 S 3rd St, Gadsden, AL 35901', phone: '(256) 952-1315', lat: 34.0059522, lng: -86.0038526 },
+  { id: 'al-hl-4', chain: 'hearinglife', chainName: 'HearingLife', name: 'HearingLife of Oxford AL', addr: '1323 Hamric Dr E, Oxford, AL 36203', phone: '(256) 403-0976', lat: 33.6153229, lng: -85.8136278 },
+
+  // === Hearing Professionals of Alabama (4 locations) ===
+  { id: 'al-hp-1', chain: 'hearing_pros', chainName: 'Hearing Professionals of Alabama', name: 'Hearing Professionals of Alabama', addr: '8133 Old Federal Rd, Montgomery, AL 36117', phone: '(334) 557-8930', lat: 32.3420292, lng: -86.1717963 },
+  { id: 'al-hp-2', chain: 'hearing_pros', chainName: 'Hearing Professionals of Alabama', name: 'Hearing Professionals of Alabama', addr: '7940 Vaughn Rd, Montgomery, AL 36116', phone: '(334) 246-4289', lat: 32.3377961, lng: -86.1775972 },
+  { id: 'al-hp-3', chain: 'hearing_pros', chainName: 'Hearing Professionals of Alabama', name: 'Hearing Professionals of Alabama – Auburn', addr: '2415 Moores Mill Rd #225, Auburn, AL 36830', phone: '(334) 539-5335', lat: 32.5859585, lng: -85.4376187 },
+  { id: 'al-hp-4', chain: 'hearing_pros', chainName: 'Hearing Professionals of Alabama', name: 'Hearing Professionals of Alabama – North Auburn', addr: '2900 E University Dr #100, Auburn, AL 36830', phone: '(334) 203-7326', lat: 32.6380527, lng: -85.4796722 },
+
+  // === Premier Medical Audiology (4 locations) ===
+  { id: 'al-pm-1', chain: 'premier_medical', chainName: 'Premier Medical Audiology', name: 'Premier Medical Audiology – East', addr: '2880 Dauphin St, Mobile, AL 36606', phone: '(251) 470-8874', lat: 30.6892043, lng: -88.1109168 },
+  { id: 'al-pm-2', chain: 'premier_medical', chainName: 'Premier Medical Audiology', name: 'Premier Medical Audiology', addr: '3701 Dauphin St, Mobile, AL 36608', phone: '(251) 341-3228', lat: 30.6866305, lng: -88.1302363 },
+  { id: 'al-pm-3', chain: 'premier_medical', chainName: 'Premier Medical Audiology', name: 'Premier Medical Daphne Audiology', addr: '1302 US-98 E, Daphne, AL 36526', phone: '(251) 210-1938', lat: 30.5964318, lng: -87.8974033 },
+  { id: 'al-pm-4', chain: 'premier_medical', chainName: 'Premier Medical Audiology', name: 'Premier Medical Providence Audiology', addr: '610 Providence Park Dr E, Bldg 2 Ste 203, Mobile, AL 36695', phone: '(251) 633-2667', lat: 30.6788754, lng: -88.202516 },
+
+  // === Coastal Alabama Hearing (2 locations) ===
+  { id: 'al-coa-1', chain: 'coastal_al', chainName: 'Coastal Alabama Hearing', name: 'Coastal Alabama Hearing', addr: '28851 N Main St Suite G, Daphne, AL 36526', phone: '(251) 207-7566', lat: 30.6457474, lng: -87.9113006 },
+  { id: 'al-coa-2', chain: 'coastal_al', chainName: 'Coastal Alabama Hearing', name: 'Coastal Alabama Hearing', addr: '101 Lottie Ln Ste 2, Fairhope, AL 36532', phone: '(251) 990-0535', lat: 30.5231969, lng: -87.8831985 },
+
+  // === Alabama Hearing Associates (2 locations) ===
+  { id: 'al-aha-1', chain: 'al_hearing_assoc', chainName: 'Alabama Hearing Associates', name: 'Alabama Hearing Associates', addr: '4205 Balmoral Dr SW Unit 201, Huntsville, AL 35801', phone: '(256) 489-0903', lat: 34.6933529, lng: -86.5787807 },
+  { id: 'al-aha-2', chain: 'al_hearing_assoc', chainName: 'Alabama Hearing Associates', name: 'Alabama Hearing Associates', addr: '8075 Madison Blvd #108, Madison, AL 35758', phone: '(256) 319-4327', lat: 34.6884569, lng: -86.7208411 },
+
+  // === Wright Hearing Center (2 locations) ===
+  { id: 'al-wri-1', chain: 'wright', chainName: 'Wright Hearing Center', name: 'Wright Hearing Center', addr: '2030 Cecil Ashburn Dr SE Ste 100A, Huntsville, AL 35802', phone: '(256) 489-1236', lat: 34.6715117, lng: -86.5373901 },
+  { id: 'al-wri-2', chain: 'wright', chainName: 'Wright Hearing Center', name: 'Wright Hearing Center', addr: '110 Riley St, Gadsden, AL 35901', phone: '(256) 547-2373', lat: 33.973534, lng: -86.0176287 },
+
+  // === Hearlab (2 locations) ===
+  { id: 'al-hlb-1', chain: 'hearlab', chainName: 'Hearlab', name: 'Hearlab', addr: '502 Montgomery Hwy, Vestavia Hills, AL 35216', phone: '(205) 978-5881', lat: 33.4510173, lng: -86.7887010 },
+  { id: 'al-hlb-2', chain: 'hearlab', chainName: 'Hearlab', name: 'Hearlab', addr: '1651 Independence Ct #151, Birmingham, AL 35209', phone: '(205) 978-5881', lat: 33.4619319, lng: -86.7783685 },
+
+  // === Excel ENT (2 locations) ===
+  { id: 'al-exc-1', chain: 'excel_ent', chainName: 'Excel ENT', name: 'Excel ENT Homewood', addr: '509 Brookwood Blvd #101, Birmingham, AL 35209', phone: '(205) 776-3131', lat: 33.4665621, lng: -86.7767924 },
+  { id: 'al-exc-2', chain: 'excel_ent', chainName: 'Excel ENT', name: 'Excel ENT of Alabama', addr: '2161 Valleydale Rd, Birmingham, AL 35244', phone: '(205) 988-6858', lat: 33.3596157, lng: -86.7701404 },
+
+  // === Physicians Hearing Center (3 locations) ===
+  { id: 'al-phy-1', chain: 'physicians_hc', chainName: 'Physicians Hearing Center', name: 'Physicians Hearing Center', addr: '1963 Memorial Pkwy SW Suite 5, Huntsville, AL 35801', phone: '(256) 535-9038', lat: 34.7214582, lng: -86.5919006 },
+  { id: 'al-phy-2', chain: 'physicians_hc', chainName: 'Physicians Hearing Center', name: 'Physicians Hearing Center', addr: '8337 Hwy 72 W Suite 301, Madison, AL 35758', phone: '(256) 535-9038', lat: 34.7490742, lng: -86.7627716 },
+  { id: 'al-phy-3', chain: 'physicians_hc', chainName: 'Physicians Hearing Center', name: 'Physicians Hearing Center', addr: '4300 W Main St #403, Dothan, AL 36305', phone: '(334) 350-3696', lat: 31.2374476, lng: -85.4571178 },
+
+  // === Lucid Hearing Center (3 locations) ===
+  { id: 'al-luc-1', chain: 'lucid', chainName: 'Lucid Hearing Center', name: 'Lucid Hearing Center', addr: '3053 John Hawkins Pkwy, Hoover, AL 35244', phone: '(205) 982-4414', lat: 33.3735479, lng: -86.8083105 },
+  { id: 'al-luc-2', chain: 'lucid', chainName: 'Lucid Hearing Center', name: 'Lucid Hearing Center', addr: '2335 Bent Creek Rd, Auburn, AL 36830', phone: '(334) 539-6056', lat: 32.608258, lng: -85.4256242 },
+  { id: 'al-luc-3', chain: 'lucid', chainName: 'Lucid Hearing Center', name: 'Lucid Hearing Center', addr: '3440 Ross Clark Cir, Dothan, AL 36303', phone: '(334) 671-5005', lat: 31.244848, lng: -85.4269178 },
+
+  // === Sam's Club Hearing Aid Center (5 locations) ===
+  { id: 'al-sam-1', chain: 'sams_club', chainName: "Sam's Club Hearing", name: "Sam's Club Hearing Aid Center", addr: '3053 John Hawkins Pkwy, Hoover, AL 35244', phone: '(205) 982-4414', lat: 33.3732250, lng: -86.8084154 },
+  { id: 'al-sam-2', chain: 'sams_club', chainName: "Sam's Club Hearing", name: "Sam's Club Hearing Aid Center", addr: '601 E Interstate 65 Service Rd S, Mobile, AL 36606', phone: '(251) 479-2063', lat: 30.6790267, lng: -88.1232539 },
+  { id: 'al-sam-3', chain: 'sams_club', chainName: "Sam's Club Hearing", name: "Sam's Club Hearing Aid Center", addr: '1080 Eastern Blvd, Montgomery, AL 36117', phone: '(334) 277-5033', lat: 32.3649512, lng: -86.215902 },
+  { id: 'al-sam-4', chain: 'sams_club', chainName: "Sam's Club Hearing", name: "Sam's Club Hearing Aid Center", addr: '29683 Frederick Blvd, Daphne, AL 36526', phone: '(251) 621-2008', lat: 30.6587168, lng: -87.8560138 },
+  { id: 'al-sam-5', chain: 'sams_club', chainName: "Sam's Club Hearing", name: "Sam's Club Hearing Aid Center", addr: '3440 Ross Clark Cir, Dothan, AL 36303', phone: '(334) 350-3403', lat: 31.2447592, lng: -85.4268985 },
+
+  // === Costco Hearing (1 location) ===
+  { id: 'al-cos-1', chain: null, chainName: null, name: 'Costco Hearing Aid Store', addr: '3650 Galleria Cir #362d, Hoover, AL 35244', phone: '(205) 909-1075', lat: 33.3794551, lng: -86.8126887 },
+
+  // === Single-location practices ===
+  // Birmingham metro
+  { id: 'al-sgl-bsh', chain: null, chainName: null, name: 'Birmingham Speech & Hearing Associates', addr: '4 Office Park Cir #301, Mountain Brook, AL 35223', phone: '(205) 871-3878', lat: 33.4798138, lng: -86.7724571 },
+  { id: 'al-sgl-lhc', chain: null, chainName: null, name: 'Local Hearing Aid & Audiology', addr: '2820 Columbiana Rd #210, Vestavia Hills, AL 35216', phone: '(205) 822-1881', lat: 33.4218145, lng: -86.8081530 },
+  { id: 'al-sgl-bal', chain: null, chainName: null, name: 'Balance Hearing Center', addr: '449 Sunset Dr, Vestavia Hills, AL 35216', phone: '(205) 296-6096', lat: 33.4509225, lng: -86.7798703 },
+  { id: 'al-sgl-aes', chain: null, chainName: null, name: 'Alabama Ear Specialists', addr: '2937 7th Ave S, Birmingham, AL 35233', phone: '(205) 598-4799', lat: 33.5121547, lng: -86.7858981 },
+  { id: 'al-sgl-jmc', chain: null, chainName: null, name: 'Jennifer McInnish, AuD', addr: '833 Princeton Ave SW Ste 200A, Birmingham, AL 35211', phone: '(205) 783-7421', lat: 33.499032, lng: -86.8454059 },
+  { id: 'al-sgl-bhb', chain: null, chainName: null, name: 'Birmingham Hearing And Balance Center', addr: '2700 10th Ave S, Birmingham, AL 35205', phone: '(205) 933-2951', lat: 33.507703, lng: -86.7873310 },
+  { id: 'al-sgl-sol', chain: null, chainName: null, name: 'Hearing Solutions', addr: '3000 Meadow Lake Dr, Birmingham, AL 35242', phone: '(205) 994-6075', lat: 33.4175677, lng: -86.6783026 },
+  { id: 'al-sgl-vhb', chain: null, chainName: null, name: 'Valleydale Hearing & Balance Center', addr: '244 Inverness Center Dr #100, Birmingham, AL 35242', phone: '(205) 637-0731', lat: 33.4159718, lng: -86.7037362 },
+  { id: 'al-sgl-aea', chain: null, chainName: null, name: 'Alabama ENT & Allergy', addr: '2001 Providence Park, Birmingham, AL 35242', phone: '(205) 598-6060', lat: 33.382991, lng: -86.7313570 },
+  { id: 'al-sgl-mcb', chain: null, chainName: null, name: 'McCool & Bhuta ENT Specialists', addr: '3055 Independence Dr, Homewood, AL 35209', phone: '(205) 414-1368', lat: 33.4759102, lng: -86.7870066 },
+  { id: 'al-sgl-hen', chain: null, chainName: null, name: 'Hoover Ear, Nose & Throat Associates', addr: '2116 Data Park Cir, Hoover, AL 35244', phone: '(205) 733-9595', lat: 33.3791137, lng: -86.7978250 },
+  { id: 'al-sgl-hhc', chain: null, chainName: null, name: 'Hoover Hearing Clinic', addr: '2116 Data Park Cir, Hoover, AL 35244', phone: '(205) 733-9694', lat: 33.3791155, lng: -86.7978185 },
+  { id: 'al-sgl-thp', chain: null, chainName: null, name: 'The Hearing Place', addr: '2161 Valleydale Rd, Birmingham, AL 35244', phone: '', lat: 33.3595773, lng: -86.7701349 },
+  { id: 'al-sgl-omh', chain: null, chainName: null, name: 'Oak Mountain Hearing Associates', addr: '389 Huntley Pkwy, Pelham, AL 35124', phone: '(205) 728-1690', lat: 33.2742284, lng: -86.7924700 },
+  { id: 'al-sgl-sou', chain: null, chainName: null, name: 'Southern ENT & Sinus Center', addr: '1809 Gadsden Hwy, Birmingham, AL 35235', phone: '(205) 838-3755', lat: 33.6061545, lng: -86.6310311 },
+  { id: 'al-sgl-cph', chain: null, chainName: null, name: "Children's of Alabama – Pediatric Hearing & Speech", addr: '1600 7th Ave S, McWane Bldg, Birmingham, AL 35233', phone: '(205) 638-9149', lat: 33.5053682, lng: -86.8058712 },
+  { id: 'al-sgl-ljc', chain: null, chainName: null, name: 'Leslie J. Crawford, AuD', addr: '4 Office Park Cir, Mountain Brook, AL 35223', phone: '(205) 871-3878', lat: 33.4797296, lng: -86.7724501 },
+
+  // Huntsville/Madison metro singles
+  { id: 'al-sgl-hsv1', chain: null, chainName: null, name: 'Huntsville Hearing Aid Center', addr: '117 A Longwood Drive SW, Huntsville, AL 35801', phone: '(256) 870-7115', lat: 34.7179384, lng: -86.579838 },
+  { id: 'al-sgl-hsv2', chain: null, chainName: null, name: 'Center For Hearing', addr: '7531 Memorial Pkwy SW Suite C, Huntsville, AL 35802', phone: '(256) 489-7700', lat: 34.6678232, lng: -86.5721338 },
+  { id: 'al-sgl-hsv3', chain: null, chainName: null, name: 'The Balance and Hearing Center', addr: '800 Governors Dr SW, Huntsville, AL 35801', phone: '(256) 274-4794', lat: 34.7204056, lng: -86.5908905 },
+  { id: 'al-sgl-hsv4', chain: null, chainName: null, name: 'Hearing & Speech Clinic', addr: '303 Williams Ave SW #1111, Huntsville, AL 35801', phone: '(256) 536-7405', lat: 34.7253439, lng: -86.5854369 },
+  { id: 'al-sgl-hsv5', chain: null, chainName: null, name: 'Carroll Hearing Associates, LLC', addr: '4245 Balmoral Dr SW Unit 204, Huntsville, AL 35801', phone: '(256) 489-9992', lat: 34.6926083, lng: -86.5787722 },
+  { id: 'al-sgl-hsv6', chain: null, chainName: null, name: 'Earfinity', addr: '610 Airport Rd SW #200, Huntsville, AL 35802', phone: '(256) 881-5457', lat: 34.6917728, lng: -86.5720112 },
+  { id: 'al-sgl-mad1', chain: null, chainName: null, name: 'North Alabama ENT Associates', addr: '8337 Hwy 72 W Suite 301, Madison, AL 35758', phone: '(256) 536-9300', lat: 34.7490742, lng: -86.7627716 },
+  { id: 'al-sgl-mad2', chain: null, chainName: null, name: 'Valley ENT Associates', addr: '9238 Madison Blvd Bldg 2 Ste 117, Madison, AL 35758', phone: '(256) 772-7148', lat: 34.6747495, lng: -86.7624098 },
+
+  // Mobile/Daphne/Fairhope singles
+  { id: 'al-sgl-mob1', chain: null, chainName: null, name: 'USA Speech and Hearing Center', addr: '5721 USA N Dr Ste 1119, Mobile, AL 36688', phone: '(251) 445-9378', lat: 30.7000448, lng: -88.1747949 },
+  { id: 'al-sgl-mob2', chain: null, chainName: null, name: 'All About Hearing', addr: '4909 Government Blvd Suite A, Mobile, AL 36693', phone: '(251) 901-2300', lat: 30.6165577, lng: -88.1579366 },
+  { id: 'al-sgl-dap1', chain: null, chainName: null, name: 'Family Hearing Centers', addr: '6384 Bayfront Park Dr Suite C, Daphne, AL 36526', phone: '(251) 888-1888', lat: 30.6301679, lng: -87.9139777 },
+  { id: 'al-sgl-fai1', chain: null, chainName: null, name: 'United Hearing Centers', addr: '22530 US-98 #240, Fairhope, AL 36532', phone: '(251) 999-6766', lat: 30.5550487, lng: -87.8910592 },
+  { id: 'al-sgl-fai2', chain: null, chainName: null, name: 'Eastern Shore ENT Clinic', addr: '8096 Twin Beech Rd Suite 102, Fairhope, AL 36532', phone: '(251) 928-0300', lat: 30.5013343, lng: -87.8838861 },
+
+  // Tuscaloosa singles
+  { id: 'al-sgl-tus1', chain: null, chainName: null, name: 'Ascent Audiology & Hearing', addr: '1800 McFarland N Blvd #330, Tuscaloosa, AL 35406', phone: '(205) 345-7614', lat: 33.2351869, lng: -87.5507451 },
+  { id: 'al-sgl-tus2', chain: null, chainName: null, name: 'Tuscaloosa Ear, Nose & Throat Center', addr: '1300 McFarland Blvd NE Ste 150, Tuscaloosa, AL 35406', phone: '(205) 758-9041', lat: 33.2296319, lng: -87.5355647 },
+  { id: 'al-sgl-tus3', chain: null, chainName: null, name: 'Alabama Hearing Aid Center', addr: '1510 3rd Ave, Tuscaloosa, AL 35401', phone: '(205) 758-8529', lat: 33.1979756, lng: -87.5392460 },
+
+  // Dothan singles
+  { id: 'al-sgl-dot1', chain: null, chainName: null, name: 'Hearing Associates of Dothan', addr: '200 Grove Park Ln Suite 800, Dothan, AL 36305', phone: '(334) 702-4327', lat: 31.2354325, lng: -85.4649816 },
+  { id: 'al-sgl-dot2', chain: null, chainName: null, name: 'Hearing Center South', addr: '2800 AL-210 #1a, Dothan, AL 36301', phone: '(334) 793-2211', lat: 31.2137659, lng: -85.4287718 },
+  { id: 'al-sgl-dot3', chain: null, chainName: null, name: 'ENTCare Dothan', addr: '4300 W Main St #403, Dothan, AL 36305', phone: '(334) 793-4788', lat: 31.2366274, lng: -85.4565151 },
+
+  // Auburn/Opelika singles
+  { id: 'al-sgl-aub1', chain: null, chainName: null, name: 'East Alabama Ear Nose And Throat', addr: '1965 1st Ave, Opelika, AL 36801', phone: '(334) 705-0012', lat: 32.6346983, lng: -85.4046141 },
+  { id: 'al-sgl-aub2', chain: null, chainName: null, name: 'Auburn University Speech and Hearing Clinic', addr: '1199 Haley Center, Auburn, AL 36849', phone: '(334) 844-9600', lat: 32.6033955, lng: -85.4867928 },
+
+  // Montgomery/Prattville singles
+  { id: 'al-sgl-mon1', chain: null, chainName: null, name: 'Aum Speech & Hearing Clinic', addr: '7145 Halcyon Summit Dr, Montgomery, AL 36117', phone: '(334) 244-3408', lat: 32.3687653, lng: -86.1682186 },
+
+  // Cullman singles
+  { id: 'al-sgl-cul1', chain: null, chainName: null, name: 'Johnson Hearing Services, P.C.', addr: '1900 Main Ave SW, Cullman, AL 35055', phone: '(256) 841-0930', lat: 34.1510179, lng: -86.8475322 },
+
+  // Selma singles
+  { id: 'al-sgl-sel1', chain: null, chainName: null, name: 'Central Alabama Audiology', addr: '203 Dallas Ave, Selma, AL 36701', phone: '(334) 872-9711', lat: 32.4062561, lng: -87.0311345 },
+  { id: 'al-sgl-sel2', chain: null, chainName: null, name: 'ENT Consultants (Dr. Aghedo)', addr: '731 Dallas Ave, Selma, AL 36701', phone: '(334) 872-4778', lat: 32.4092353, lng: -87.0243386 },
+
+  // Gadsden singles
+  { id: 'al-sgl-gad1', chain: null, chainName: null, name: 'Advanced Hearing Healthcare', addr: '110 Riley St, Gadsden, AL 35901', phone: '(256) 547-2373', lat: 33.9735359, lng: -86.0176381 },
+  // === Supplemental dataset (NPI/NPPES audiologists + organizations) ===
+  { id: 'al-new-001', chain: null, chainName: null, name: '360Care Services of AL LLC', addr: '150 S Perry St, Montgomery, AL 36104', phone: '(502) 244-2441', lat: 32.36875, lng: -86.30855 },
+  { id: 'al-new-002', chain: null, chainName: null, name: 'Robyn Thaxton Abernathy (+4 audiologists)', addr: '927 Franklin St SE Suite 100, Huntsville, AL 35801', phone: '(256) 535-9038', lat: 34.72725, lng: -86.59108 },
+  { id: 'al-new-003', chain: null, chainName: null, name: 'Elizabeth Meztista Adams', addr: '5721 USA Dr N Hahn 1119, Mobile, AL 36688', phone: '(251) 445-9361', lat: 30.69871, lng: -88.03672 },
+  { id: 'al-new-004', chain: null, chainName: null, name: 'Shoals Audiology', addr: '1114 Bradshaw Dr, Florence, AL 35630', phone: '(256) 764-2667', lat: 34.80529, lng: -87.68474 },
+  { id: 'al-new-005', chain: null, chainName: null, name: 'Alabama Head and Neck Clinic', addr: '730 Memorial Dr Suite 108, Bessemer, AL 35022', phone: '(205) 424-1450', lat: 33.40071, lng: -86.96286 },
+  { id: 'al-new-006', chain: null, chainName: null, name: 'Alabama Hearing & Balance Associates, INC.', addr: '149 W Peachtree Ave, Foley, AL 36535', phone: '(251) 970-3277', lat: 30.40286, lng: -87.6835 },
+  { id: 'al-new-007', chain: null, chainName: null, name: 'Christina A Albea (+1 audiologists)', addr: '700 University Blvd E, Tuscaloosa, AL 35401', phone: '(205) 348-7131', lat: 33.20317, lng: -87.57462 },
+  { id: 'al-new-008', chain: null, chainName: null, name: 'Leigh Ann Alexander (+1 audiologists)', addr: '2018 Brookwood Medical Ctr Dr Ste 314, Birmingham, AL 35209', phone: '(205) 877-2950', lat: 33.5207, lng: -86.80959 },
+  { id: 'al-new-009', chain: null, chainName: null, name: 'Jasper Hearing Center, LLC', addr: '904 Highway 78 E, Jasper, AL 35501', phone: '(205) 265-2057', lat: 33.82739, lng: -87.27599 },
+  { id: 'al-new-010', chain: null, chainName: null, name: 'Laura Jean Anderson', addr: '6980 Winton Blount Blvd, Montgomery, AL 36117', phone: '(334) 277-0484', lat: 32.37113, lng: -86.30888 },
+  { id: 'al-new-011', chain: null, chainName: null, name: 'Janet P Andrews (+2 audiologists)', addr: '301 Andrews Ave, Fort Rucker, AL 36362', phone: '(334) 255-7192', lat: 31.35198, lng: -85.71003 },
+  { id: 'al-new-012', chain: null, chainName: null, name: 'Apollo Audiology, LLC', addr: '250 Chateau Dr SW Ste 216, Huntsville, AL 35801', phone: '(256) 622-5618', lat: 34.72816, lng: -86.5923 },
+  { id: 'al-new-013', chain: null, chainName: null, name: 'Kerrie H Armstrong', addr: '406 Taylor St Ste B, Scottsboro, AL 35768', phone: '(256) 574-6100', lat: 34.6788, lng: -86.03704 },
+  { id: 'al-new-014', chain: null, chainName: null, name: 'Casey C Arnold', addr: '100 Pilot Medical Drive Suite 255, Birmingham, AL 35235', phone: '(205) 716-6385', lat: 33.5129, lng: -86.81766 },
+  { id: 'al-new-015', chain: null, chainName: null, name: 'Ascent Audiology LLC', addr: '1800 Mcfarland Blvd N Ste 330, Tuscaloosa, AL 35406', phone: '(205) 345-7614', lat: 33.21466, lng: -87.56733 },
+  { id: 'al-new-016', chain: null, chainName: null, name: 'Auburn University Speech & Hearing Clinic', addr: '1199 Haley Ctr, Auburn, AL 36849', phone: '(334) 844-9600', lat: 32.6076, lng: -85.48266 },
+  { id: 'al-new-017', chain: null, chainName: null, name: 'Auburn University Montgomery Aum Speech and Hearing Clinic', addr: '7041 Senators Dr Liberal Arts Building Room 110, Montgomery, AL 36117', phone: '(334) 244-3408', lat: 32.36731, lng: -86.29148 },
+  { id: 'al-new-018', chain: null, chainName: null, name: 'Stephanie Morris Axtell (+1 audiologists)', addr: '1940 Elmer J Bissell Rd, Birmingham, AL 35243', phone: '(205) 824-4847', lat: 33.5169, lng: -86.80946 },
+  { id: 'al-new-019', chain: null, chainName: null, name: 'Suzanne M Baggett', addr: '514 Meadow Ridge Cir, Birmingham, AL 35242', phone: '(205) 910-2869', lat: 33.52321, lng: -86.80827 },
+  { id: 'al-new-020', chain: null, chainName: null, name: 'Balance & Hearing Center, INC.', addr: '1280 Columbiana Rd Suite 120, Birmingham, AL 35216', phone: '(205) 916-0105', lat: 33.52366, lng: -86.80901 },
+  { id: 'al-new-021', chain: null, chainName: null, name: 'Lynnette B Bardolf', addr: '301 Andrews Avenue, Fort Rucker, AL 36362', phone: '(334) 255-7387', lat: 31.35056, lng: -85.72178 },
+  { id: 'al-new-022', chain: null, chainName: null, name: 'Jennifer Stewart Barnes (+4 audiologists)', addr: '1504 Spring Hill Ave, Mobile, AL 36604', phone: '(251) 219-3923', lat: 30.69159, lng: -88.04369 },
+  { id: 'al-new-023', chain: null, chainName: null, name: 'William A Baron (+2 audiologists)', addr: '901 Leighton Ave Ste 601, Anniston, AL 36207', phone: '(256) 236-4426', lat: 33.65392, lng: -85.83641 },
+  { id: 'al-new-024', chain: null, chainName: null, name: 'Leah G Barter', addr: '26420 Kensington Pl Suite C, Daphne, AL 36526', phone: '(251) 517-0355', lat: 30.59791, lng: -87.9076 },
+  { id: 'al-new-025', chain: null, chainName: null, name: 'Heather Lynn Baty', addr: '1600 7Th Ave S Hearing and Speech, Birmingham, AL 35233', phone: '(205) 939-5124', lat: 33.5205, lng: -86.81283 },
+  { id: 'al-new-026', chain: null, chainName: null, name: 'Bay Audiology Services INC Bay Audiology Services', addr: '3401 Medical Park Dr Bldg 1 Ste 103, Mobile, AL 36693', phone: '(251) 689-3241', lat: 30.69358, lng: -88.04513 },
+  { id: 'al-new-027', chain: null, chainName: null, name: 'Candace Andrews Bell', addr: '188 Hospital Dr Suite 101, Fairhope, AL 36532', phone: '(251) 928-0300', lat: 30.51964, lng: -87.89544 },
+  { id: 'al-new-028', chain: null, chainName: null, name: 'Maryann Stokham Bensema', addr: '2400 Hospital Rd, Tuskegee, AL 36083', phone: '(334) 727-0550', lat: 32.42637, lng: -85.68974 },
+  { id: 'al-new-029', chain: null, chainName: null, name: 'Birmingham Speech & Hearing Associates', addr: '4 Office Park Circle Suite 301, Birmingham, AL 35223', phone: '(205) 871-3878', lat: 33.514, lng: -86.80628 },
+  { id: 'al-new-030', chain: null, chainName: null, name: 'Belinda J Blackstone (+2 audiologists)', addr: '930 20Th St S Suite 101, Birmingham, AL 35205', phone: '(205) 934-5471', lat: 33.51389, lng: -86.81257 },
+  { id: 'al-new-031', chain: null, chainName: null, name: 'Rebecca Blankenhorn', addr: '1610 Center St. Suite A, Mobile, AL 36604', phone: '(251) 432-4560', lat: 30.70225, lng: -88.03738 },
+  { id: 'al-new-032', chain: null, chainName: null, name: 'Amanda Moore Blaszczynski', addr: '417 S 4Th St, Gadsden, AL 35901', phone: '(256) 543-8899', lat: 34.0151, lng: -86.00328 },
+  { id: 'al-new-033', chain: null, chainName: null, name: 'Board of Trustees, University of Alabama Ua Speech and Hearing Center', addr: '700 Univ Blvd E Room 145, Tuscaloosa, AL 35401', phone: '(205) 348-7131', lat: 33.2146, lng: -87.56423 },
+  { id: 'al-new-034', chain: null, chainName: null, name: 'Thomas Ernest Borton', addr: '8136 Wynlakes Blvd, Montgomery, AL 36117', phone: '(334) 260-9291', lat: 32.36301, lng: -86.30842 },
+  { id: 'al-new-035', chain: null, chainName: null, name: 'Monica Reina Boudreaux', addr: '8154 Hwy 59 Suite 202, Foley, AL 36535', phone: '(251) 971-1152', lat: 30.40422, lng: -87.68778 },
+  { id: 'al-new-036', chain: null, chainName: null, name: 'Katherine E Bouma (+2 audiologists)', addr: '3000 Johnson Rd SW, Huntsville, AL 35805', phone: '(256) 650-1712', lat: 34.72635, lng: -86.57813 },
+  { id: 'al-new-037', chain: null, chainName: null, name: 'Hollie Boyer (+1 audiologists)', addr: '1949 Florence Blvd, Florence, AL 35630', phone: '(501) 773-7274', lat: 34.80507, lng: -87.68064 },
+  { id: 'al-new-038', chain: null, chainName: null, name: 'Todd Vanderford Brazil (+1 audiologists)', addr: '2700 10Th Ave S Suite 502, Birmingham, AL 35205', phone: '(205) 933-2951', lat: 33.52078, lng: -86.81228 },
+  { id: 'al-new-039', chain: null, chainName: null, name: 'Rebecca P. Brooks', addr: '700 University Blvd E Rm 145, Tuscaloosa, AL 35487', phone: '(205) 348-7131', lat: 33.2156, lng: -87.56994 },
+  { id: 'al-new-040', chain: null, chainName: null, name: 'Rebecca Jewel Broussard (+2 audiologists)', addr: '1224 Mcfarland Blvd NE Ste A, Tuscaloosa, AL 35406', phone: '(205) 333-3330', lat: 33.20651, lng: -87.57376 },
+  { id: 'al-new-041', chain: null, chainName: null, name: 'Karen Clinton Brown (+1 audiologists)', addr: '101 Sivley Rd SW, Huntsville, AL 35801', phone: '(256) 265-7952', lat: 34.73126, lng: -86.59037 },
+  { id: 'al-new-042', chain: null, chainName: null, name: 'Christie H Burch', addr: '1800 Mcfarland Blvd N Suite 330, Tuscaloosa, AL 35406', phone: '(205) 242-0707', lat: 33.21098, lng: -87.56204 },
+  { id: 'al-new-043', chain: null, chainName: null, name: 'Jennifer Parker Burnham', addr: '1948 AL Highway 157 Suite 410, Cullman, AL 35058', phone: '(256) 737-0368', lat: 34.17339, lng: -86.84845 },
+  { id: 'al-new-044', chain: null, chainName: null, name: 'Barbara Lou Bush', addr: '1014 Mira Vista Drive, Huntsville, AL 35802', phone: '(256) 881-8289', lat: 34.73737, lng: -86.58593 },
+  { id: 'al-new-045', chain: null, chainName: null, name: 'Jill Audrey Byrd', addr: '4 Office Park Cir Ste 301, Birmingham, AL 35223', phone: '(205) 871-3878', lat: 33.51287, lng: -86.81855 },
+  { id: 'al-new-046', chain: null, chainName: null, name: 'Jordan Byrd', addr: '795 Ross Clark Cir Suite 3, Dothan, AL 36303', phone: '(334) 699-6600', lat: 31.21774, lng: -85.38821 },
+  { id: 'al-new-047', chain: null, chainName: null, name: 'Dorothy Ann Suggs Callaway (+5 audiologists)', addr: '833 Saint Vincents Dr Ste 402, Birmingham, AL 35205', phone: '(205) 212-3574', lat: 33.52269, lng: -86.8118 },
+  { id: 'al-new-048', chain: null, chainName: null, name: 'Conna Marie Canada (+1 audiologists)', addr: '201 E Mckinney Ave Ste C, Albertville, AL 35950', phone: '(256) 894-8331', lat: 34.26149, lng: -86.21103 },
+  { id: 'al-new-049', chain: null, chainName: null, name: 'Carroll Hearing Associates, LLC', addr: '333 Whitesport Dr SW Suite 302, Huntsville, AL 35801', phone: '(256) 489-9992', lat: 34.73735, lng: -86.58558 },
+  { id: 'al-new-050', chain: null, chainName: null, name: 'Kristen Lee Casto', addr: '301 Andrews Ave. Lyster Army Health Clinic, Fort Rucker, AL 36362', phone: '(334) 255-6881', lat: 31.3543, lng: -85.70711 },
+  { id: 'al-new-051', chain: null, chainName: null, name: 'Teresa Caudle', addr: '205 South St E, Talladega, AL 35160', phone: '(256) 761-3303', lat: 33.42906, lng: -86.10183 },
+  { id: 'al-new-052', chain: null, chainName: null, name: 'Rebecca Parker Caviness (+1 audiologists)', addr: '215 Perry Hill Rd, Montgomery, AL 36109', phone: '(334) 272-4670', lat: 32.36934, lng: -86.29933 },
+  { id: 'al-new-053', chain: null, chainName: null, name: 'Center for Advancement of Nextgen Deaf', addr: '300 Vestavia Pkwy Ste 2300, Vestavia Hills, AL 35216', phone: '(205) 795-2039', lat: 33.44554, lng: -86.78526 },
+  { id: 'al-new-054', chain: null, chainName: null, name: 'Amy Chandler', addr: '931 Sharit Ave Ste 101, Gardendale, AL 35071', phone: '(205) 631-8116', lat: 33.65576, lng: -86.81447 },
+  { id: 'al-new-055', chain: null, chainName: null, name: 'Robyn Chunn', addr: '833 St. Vincent\'S Drive Building 3-Suite 402, Birmingham, AL 35205', phone: '(205) 212-3574', lat: 33.51795, lng: -86.80223 },
+  { id: 'al-new-056', chain: null, chainName: null, name: 'Kailey Rae Clark (+3 audiologists)', addr: '700 19Th St S, Birmingham, AL 35233', phone: '(205) 933-8101', lat: 33.52386, lng: -86.81466 },
+  { id: 'al-new-057', chain: null, chainName: null, name: 'Erica Rosa Claxton', addr: '1208 3Rd Ave S, Birmingham, AL 35233', phone: '(205) 638-7500', lat: 33.51861, lng: -86.81618 },
+  { id: 'al-new-058', chain: null, chainName: null, name: 'Emily Williams Cole (+1 audiologists)', addr: '7191 Cahaba Valley Rd Suite 301, Birmingham, AL 35242', phone: '(205) 980-2091', lat: 33.52438, lng: -86.80373 },
+  { id: 'al-new-059', chain: null, chainName: null, name: 'Sherrill Quinn Coley', addr: '931 Sharit Ave Ste.101, Gardendale, AL 35071', phone: '(205) 631-8116', lat: 33.65838, lng: -86.8108 },
+  { id: 'al-new-060', chain: null, chainName: null, name: 'Coosa Valley Hearing Clinic, INC', addr: '208 W Fort Williams St, Sylacauga, AL 35150', phone: '(256) 249-0943', lat: 33.17493, lng: -86.25795 },
+  { id: 'al-new-061', chain: null, chainName: null, name: 'Anna Crady', addr: '302 Merchants Walk Suite 100, Tuscaloosa, AL 35406', phone: '(205) 523-9300', lat: 33.21348, lng: -87.56849 },
+  { id: 'al-new-062', chain: null, chainName: null, name: 'Rebecca G. Craft', addr: '1100 George Wallace Drive, Gadsden, AL 35903', phone: '(256) 547-8653', lat: 34.0182, lng: -86.00605 },
+  { id: 'al-new-063', chain: null, chainName: null, name: 'Homestead Hearing', addr: '2245 Springwood Dr, Auburn, AL 36830', phone: '(334) 748-8254', lat: 32.60291, lng: -85.48397 },
+  { id: 'al-new-064', chain: null, chainName: null, name: 'Jamie Harrison Crook', addr: '301 Andrews Avenue, Eye and Ear Clinic (Eent) Lyster Army Health Clinic, Fort Rucker, AL 36302', phone: '(334) 255-7185', lat: 31.34097, lng: -85.70588 },
+  { id: 'al-new-065', chain: null, chainName: null, name: 'Grett Doneen Crowley', addr: '28850 Highway 98 Ste. 104, Daphne, AL 36526', phone: '(251) 621-1660', lat: 30.6088, lng: -87.89763 },
+  { id: 'al-new-066', chain: null, chainName: null, name: 'Florence D. Cuneo', addr: '700 19Th St S Audiology Department/Birmingham Vamc, Birmingham, AL 35233', phone: '(205) 933-8101', lat: 33.51591, lng: -86.81836 },
+  { id: 'al-new-067', chain: null, chainName: null, name: 'Shandi L Dabbs', addr: '2290 Moores Mill Rd Suite 400, Auburn, AL 36830', phone: '(706) 518-8501', lat: 32.61519, lng: -85.47275 },
+  { id: 'al-new-068', chain: null, chainName: null, name: 'Monica Miles Davenport', addr: '2116 Data Park, Hoover, AL 35244', phone: '(205) 733-9595', lat: 33.3996, lng: -86.81165 },
+  { id: 'al-new-069', chain: null, chainName: null, name: 'Shelby T Davis (+1 audiologists)', addr: '302 Merchants Walk Ste 100, Tuscaloosa, AL 35406', phone: '(205) 523-9300', lat: 33.20377, lng: -87.56451 },
+  { id: 'al-new-070', chain: null, chainName: null, name: 'Kristen Delauney', addr: '704 Medical Center Pkwy, Boaz, AL 35957', phone: '(256) 593-7266', lat: 34.20322, lng: -86.17219 },
+  { id: 'al-new-071', chain: null, chainName: null, name: 'Deramus Hearing Aid Centera', addr: '2809 Chestnut St, Montgomery, AL 36107', phone: '(334) 262-7553', lat: 32.36645, lng: -86.2991 },
+  { id: 'al-new-072', chain: null, chainName: null, name: 'Jennifer Anderson Dillard', addr: '1963 Memorial Parkway SW Suite 5, Huntsville, AL 35801', phone: '(256) 536-9300', lat: 34.72711, lng: -86.5794 },
+  { id: 'al-new-073', chain: null, chainName: null, name: 'Emily Chastain Domingue', addr: '8230 Spanish Fort Blvd Suite C, Spanish Fort, AL 36527', phone: '(251) 525-0734', lat: 30.67462, lng: -87.92049 },
+  { id: 'al-new-074', chain: null, chainName: null, name: 'Catherine Ann Drescher', addr: '635 Mcqueen Smith Rd N Suite D, Prattville, AL 36066', phone: '(334) 358-6501', lat: 32.46455, lng: -86.45556 },
+  { id: 'al-new-075', chain: null, chainName: null, name: 'Maddox Claire Droke', addr: '516 Brookwood Blvd Ste 100, Birmingham, AL 35209', phone: '(205) 776-3131', lat: 33.51442, lng: -86.81379 },
+  { id: 'al-new-076', chain: null, chainName: null, name: 'Kathy Renee Duncan', addr: '1504 Spring Hill Ave 126M, Mobile, AL 36604', phone: '(251) 219-3923', lat: 30.70233, lng: -88.0372 },
+  { id: 'al-new-077', chain: null, chainName: null, name: 'Heidi Elliot (+1 audiologists)', addr: '1610 Center St Suite A, Mobile, AL 36604', phone: '(251) 432-4560', lat: 30.69453, lng: -88.03958 },
+  { id: 'al-new-078', chain: null, chainName: null, name: 'Tammy Alleen Ellis', addr: '3400 Highway 78 E 205 Medical Arts Tower, Jasper, AL 35501', phone: '(205) 221-4630', lat: 33.82599, lng: -87.28256 },
+  { id: 'al-new-079', chain: null, chainName: null, name: 'Laurie Melamed Elmets', addr: '2000 6Th Ave S Division of Otolaryngology, Birmingham, AL 35233', phone: '(205) 934-9766', lat: 33.51633, lng: -86.80881 },
+  { id: 'al-new-080', chain: null, chainName: null, name: 'ENT Associates of Alabama P.C.', addr: '833 St. Vincent\'S Drive Suite 402, Birmingham, AL 35205', phone: '(205) 933-9236', lat: 33.51482, lng: -86.81544 },
+  { id: 'al-new-081', chain: null, chainName: null, name: 'ENT Associates of Alabama PC', addr: '835 St Vincents Dr. Suite #402, Birmingham, AL 35205', phone: '(205) 933-9236', lat: 33.51259, lng: -86.80804 },
+  { id: 'al-new-082', chain: null, chainName: null, name: 'Brian Keith Ergle', addr: '245 Cahaba Valley Pkwy Suite 200, Pelham, AL 35124', phone: '(800) 379-0309', lat: 33.28181, lng: -86.8027 },
+  { id: 'al-new-083', chain: null, chainName: null, name: 'Margaret Cooper Evans', addr: '4 Office Park Cir Ste 301, Mountain Brook, AL 35223', phone: '(205) 871-3878', lat: 33.49343, lng: -86.74622 },
+  { id: 'al-new-084', chain: null, chainName: null, name: 'Emily Kate Feibelman (+3 audiologists)', addr: '2000 6Th Ave S, Birmingham, AL 35233', phone: '(205) 934-9999', lat: 33.51493, lng: -86.80736 },
+  { id: 'al-new-085', chain: null, chainName: null, name: 'Fmr and Associates Chr Diagnostics', addr: '5702 Carrington Lake Pkwy, Trussville, AL 35173', phone: '(770) 798-1274', lat: 33.6164, lng: -86.61542 },
+  { id: 'al-new-086', chain: null, chainName: null, name: 'Joseph E Ford', addr: '700 So 19Th Street Audiology Section, Vamc, Birmingham, AL 35233', phone: '(205) 558-4704', lat: 33.5247, lng: -86.80912 },
+  { id: 'al-new-087', chain: null, chainName: null, name: 'Julie B Fortenberry', addr: '1948 Alabama Hwy 157 Suite 410, Cullman, AL 35058', phone: '(256) 737-0368', lat: 34.17442, lng: -86.83828 },
+  { id: 'al-new-088', chain: null, chainName: null, name: 'Cydney Ennis Gehring (+2 audiologists)', addr: '927 Franklin St SE Ste 100, Huntsville, AL 35801', phone: '(256) 535-9038', lat: 34.7347, lng: -86.59167 },
+  { id: 'al-new-089', chain: null, chainName: null, name: 'Emily Gibbs (+1 audiologists)', addr: '610 Providence Park Dr E Ste 203, Mobile, AL 36695', phone: '(251) 633-2667', lat: 30.68976, lng: -88.04114 },
+  { id: 'al-new-090', chain: null, chainName: null, name: 'Amber Mccullar Girardeau', addr: '22530 Us Highway 98 Ste 240, Fairhope, AL 36532', phone: '(251) 929-9397', lat: 30.52183, lng: -87.90389 },
+  { id: 'al-new-091', chain: null, chainName: null, name: 'Susan Gordon-Hickey', addr: '5721 USA Dr N Rm 1119, Mobile, AL 36688', phone: '(251) 445-9378', lat: 30.69861, lng: -88.03678 },
+  { id: 'al-new-092', chain: null, chainName: null, name: 'Ashley Cooke Graffeo (+1 audiologists)', addr: '1600 7Th Ave S Clinic 2 Hearing and Speech, Birmingham, AL 35233', phone: '(205) 939-5359', lat: 33.52538, lng: -86.81763 },
+  { id: 'al-new-093', chain: null, chainName: null, name: 'Michael Calvin Graves', addr: '3701 Loop Rd Tuscaloosa Vamc, Tuscaloosa, AL 35404', phone: '(205) 554-2822', lat: 33.20844, lng: -87.57209 },
+  { id: 'al-new-094', chain: null, chainName: null, name: 'Elizabeth Wallenborn Green', addr: '3000 Johnson Road SW, Huntsville, AL 35805', phone: '(256) 650-1701', lat: 34.73546, lng: -86.59062 },
+  { id: 'al-new-095', chain: null, chainName: null, name: 'Nancy Enger Gregg', addr: '2305 Montevallo Rd, Mountain Brook, AL 35223', phone: '(205) 901-5506', lat: 33.48406, lng: -86.73942 },
+  { id: 'al-new-096', chain: null, chainName: null, name: 'Shoals Hearing Clinic, P.C.', addr: '433 N Pine St, Florence, AL 35630', phone: '(256) 740-8383', lat: 34.79871, lng: -87.68129 },
+  { id: 'al-new-097', chain: null, chainName: null, name: 'Stacey D Grimes', addr: '1010 1St St N Suite 301, Alabaster, AL 35007', phone: '(205) 621-8900', lat: 33.2405, lng: -86.80878 },
+  { id: 'al-new-098', chain: null, chainName: null, name: 'Hames New Co, INC Beltone Audiology', addr: '333 Greeno Rd S Ste 2-C, Fairhope, AL 36532', phone: '(251) 928-9560', lat: 30.5221, lng: -87.8968 },
+  { id: 'al-new-099', chain: null, chainName: null, name: 'Charlton Abigail Hannah', addr: '120 Governors Dr SE, Huntsville, AL 35801', phone: '(256) 265-7952', lat: 34.7311, lng: -86.59419 },
+  { id: 'al-new-100', chain: null, chainName: null, name: 'Ericca R Hardee (+2 audiologists)', addr: '1600 5Th Ave S, Birmingham, AL 35233', phone: '(205) 939-6741', lat: 33.52559, lng: -86.80435 },
+  { id: 'al-new-101', chain: null, chainName: null, name: 'Madison Nikole Hatchett (+1 audiologists)', addr: '833 Saint Vincents Dr, Birmingham, AL 35205', phone: '(205) 933-9236', lat: 33.52517, lng: -86.80273 },
+  { id: 'al-new-102', chain: null, chainName: null, name: 'Melissa B. Haynes', addr: '927 Franklin Street Suite 100, Madison, AL 35801', phone: '(256) 535-9038', lat: 34.70418, lng: -86.75431 },
+  { id: 'al-new-103', chain: null, chainName: null, name: 'Hearing and Speech Clinic', addr: '303 Williams Ave SW Ste 1111, Huntsville, AL 35801', phone: '(256) 536-7405', lat: 34.7302, lng: -86.59125 },
+  { id: 'al-new-104', chain: null, chainName: null, name: 'Hearing Associates of Dothan, LLC', addr: '200 Grove Park Ln Ste 800, Dothan, AL 36305', phone: '(334) 702-4327', lat: 31.22181, lng: -85.39844 },
+  { id: 'al-new-105', chain: null, chainName: null, name: 'Hearing Professionals of Alabama', addr: '2415 Moores Mill Rd Suite 225, Auburn, AL 36830', phone: '(251) 769-0599', lat: 32.60821, lng: -85.47206 },
+  { id: 'al-new-106', chain: null, chainName: null, name: 'Hearing Things, in. Listening & Language Center', addr: '3290 Dauphin St Suite 504, Mobile, AL 36606', phone: '(251) 656-5493', lat: 30.69211, lng: -88.03479 },
+  { id: 'al-new-107', chain: null, chainName: null, name: 'Gracie T. Herndon (+1 audiologists)', addr: '4300 W Main St Ste 403, Dothan, AL 36305', phone: '(334) 793-4788', lat: 31.22257, lng: -85.39189 },
+  { id: 'al-new-108', chain: null, chainName: null, name: 'Andrea L Hester (+1 audiologists)', addr: '245 Cahaba Valley Pkwy, Pelham, AL 35124', phone: '(205) 942-6820', lat: 33.292, lng: -86.80108 },
+  { id: 'al-new-109', chain: null, chainName: null, name: 'Rocio Hilpert', addr: '6414 Grelot Rd Ste C, Mobile, AL 36695', phone: '(251) 410-4327', lat: 30.69618, lng: -88.03597 },
+  { id: 'al-new-110', chain: null, chainName: null, name: 'Sandra M. Hindman', addr: '2120 Loop Rd, Tuscaloosa, AL 35405', phone: '(205) 556-9494', lat: 33.20497, lng: -87.57286 },
+  { id: 'al-new-111', chain: null, chainName: null, name: 'Joseph Timothy Holston', addr: '5721 USA North Dr Hahn 1119, Mobile, AL 36688', phone: '(251) 445-9378', lat: 30.70196, lng: -88.03847 },
+  { id: 'al-new-112', chain: null, chainName: null, name: 'Tara Jean Howard', addr: '2204 Gateway Dr Ste D, Opelika, AL 36801', phone: '(334) 745-1635', lat: 32.64599, lng: -85.37384 },
+  { id: 'al-new-113', chain: null, chainName: null, name: 'Cameron Chick Hudson', addr: '2055 E South Blvd Ste 908, Montgomery, AL 36116', phone: '(334) 747-7500', lat: 32.3606, lng: -86.29848 },
+  { id: 'al-new-114', chain: null, chainName: null, name: 'Alane Hudson (+1 audiologists)', addr: '2018 Brookwood Medical Ctr Dr Suite 205, Birmingham, AL 35209', phone: '(205) 877-2827', lat: 33.51864, lng: -86.80405 },
+  { id: 'al-new-115', chain: null, chainName: null, name: 'Kylie Alexander Huggins', addr: '1758 Park Pl Ste 101, Montgomery, AL 36106', phone: '(334) 263-2150', lat: 32.362, lng: -86.29171 },
+  { id: 'al-new-116', chain: null, chainName: null, name: 'Amy Ingram', addr: '218 Sarah Way, Kimberly, AL 35091', phone: '(205) 908-4476', lat: 33.76562, lng: -86.81506 },
+  { id: 'al-new-117', chain: null, chainName: null, name: 'Jennifer Ingram', addr: '833 Saint Vincents Dr Pob #3 - Suite 402, Birmingham, AL 35205', phone: '(205) 933-9236', lat: 33.51993, lng: -86.80725 },
+  { id: 'al-new-118', chain: null, chainName: null, name: 'Aaron Leroy Johnson', addr: '1900 Main Ave SW Suite 1, Cullman, AL 35055', phone: '(256) 841-0930', lat: 34.17109, lng: -86.85024 },
+  { id: 'al-new-119', chain: null, chainName: null, name: 'David Warren Johnson', addr: '21083 Emperor Phillips Ln, Silverhill, AL 36576', phone: '(251) 945-1076', lat: 30.55206, lng: -87.75537 },
+  { id: 'al-new-120', chain: null, chainName: null, name: 'Shandanesha Johnson', addr: '2033 Normandie Dr, Montgomery, AL 36111', phone: '(720) 660-5293', lat: 32.36812, lng: -86.29785 },
+  { id: 'al-new-121', chain: null, chainName: null, name: 'Jones Institute for Rehabilitative Audiology, LLC', addr: '300 Vestavia Pkwy Suite 2300, Vestavia Hills, AL 35216', phone: '(205) 795-2059', lat: 33.44767, lng: -86.78629 },
+  { id: 'al-new-122', chain: null, chainName: null, name: 'Melinda Jumper', addr: '1450 East Avalon Avenue, Muscle Shoals, AL 35661', phone: '(256) 381-1110', lat: 34.74512, lng: -87.65968 },
+  { id: 'al-new-123', chain: null, chainName: null, name: 'Stephanie J Karch', addr: '6901 Farrel Rd, Fort Rucker, AL 36362', phone: '(202) 651-5000', lat: 31.34356, lng: -85.70971 },
+  { id: 'al-new-124', chain: null, chainName: null, name: 'Northland Hearing Centers INC Audibel Hearing Aid Center', addr: '33605 Us Highway 280, Childersburg, AL 35044', phone: '(256) 378-7000', lat: 33.27474, lng: -86.35688 },
+  { id: 'al-new-125', chain: null, chainName: null, name: 'Leah Michelle Kelly', addr: '6104 Lindholm Dr, Mobile, AL 36693', phone: '(251) 367-8627', lat: 30.6978, lng: -88.0435 },
+  { id: 'al-new-126', chain: null, chainName: null, name: 'Allison F Kelly', addr: '2415 Moores Mill Rd Ste 225, Auburn, AL 36830', phone: '(251) 709-5872', lat: 32.60733, lng: -85.47627 },
+  { id: 'al-new-127', chain: null, chainName: null, name: 'Amy B Kennedy', addr: '107 E Watts St, Enterprise, AL 36330', phone: '(334) 393-6837', lat: 31.30922, lng: -85.85595 },
+  { id: 'al-new-128', chain: null, chainName: null, name: 'Madeline Rowe Kent', addr: '15232 Greenfield Dr, Athens, AL 35613', phone: '(256) 233-1650', lat: 34.80928, lng: -86.96327 },
+  { id: 'al-new-129', chain: null, chainName: null, name: 'Northwest Alabama Hearing Clinic, INC', addr: '1256 Military St S, Hamilton, AL 35570', phone: '(205) 952-9944', lat: 34.12993, lng: -87.99376 },
+  { id: 'al-new-130', chain: null, chainName: null, name: 'Melody Mathews Kilpatrick', addr: '2000 6Th Ave S ENT - 5Th Floor, Birmingham, AL 35233', phone: '(205) 934-9766', lat: 33.51531, lng: -86.8026 },
+  { id: 'al-new-131', chain: null, chainName: null, name: 'Stephanie Marie Koski', addr: '3686 Grandview Parkway Suite 530, Birmingham, AL 35243', phone: '(205) 591-8260', lat: 33.52393, lng: -86.80357 },
+  { id: 'al-new-132', chain: null, chainName: null, name: 'Sridhar Krishnamurti', addr: '301 Mariarden Rd Lake Martin Community Hospital, Dadeville, AL 36853', phone: '(256) 825-7821', lat: 32.82887, lng: -85.76866 },
+  { id: 'al-new-133', chain: null, chainName: null, name: 'Kristi Dowdle Kuczenski', addr: '3701 Loop Rd Audiology, Tuscaloosa, AL 35404', phone: '(205) 554-2000', lat: 33.21447, lng: -87.56554 },
+  { id: 'al-new-134', chain: null, chainName: null, name: 'Tim Landers', addr: '2400 Hospital Rd. Cavhcs - 126, Tuskegee, AL 36083', phone: '(334) 727-0550', lat: 32.42586, lng: -85.68293 },
+  { id: 'al-new-135', chain: null, chainName: null, name: 'Jane C Laseter', addr: '602 S Lawrence St, Montgomery, AL 36104', phone: '(334) 293-7118', lat: 32.36896, lng: -86.30886 },
+  { id: 'al-new-136', chain: null, chainName: null, name: 'Deana Elizabeth Latham', addr: '2800 Ross Clark Cir, Dothan, AL 36301', phone: '(334) 793-2211', lat: 31.22764, lng: -85.39411 },
+  { id: 'al-new-137', chain: null, chainName: null, name: 'Kathy V. Lenoir', addr: '931 Sharit Ave #101, Gardendale, AL 35071', phone: '(205) 631-8116', lat: 33.66349, lng: -86.8054 },
+  { id: 'al-new-138', chain: null, chainName: null, name: 'Denise Free Lensgraf-Landers', addr: 'Cavhcs Audiology (117) 2400 Hospital Road, Tuskegee, AL 36083', phone: '(334) 725-3060', lat: 32.41918, lng: -85.69862 },
+  { id: 'al-new-139', chain: null, chainName: null, name: 'Robert Kirkland Lightfoot', addr: '700 19Th St S Audiology Section, Vamc, Birmingham, AL 35233', phone: '(205) 558-4704', lat: 33.5131, lng: -86.80944 },
+  { id: 'al-new-140', chain: null, chainName: null, name: 'Local Hearing Aid and Audiology Services', addr: '827 19Th St N, Bessemer, AL 35020', phone: '(205) 426-1801', lat: 33.39861, lng: -86.95251 },
+  { id: 'al-new-141', chain: null, chainName: null, name: 'Chelsea Foglio Love', addr: '5406 Highway 280 Suite A101, Birmingham, AL 35242', phone: '(205) 874-9436', lat: 33.52165, lng: -86.81574 },
+  { id: 'al-new-142', chain: null, chainName: null, name: 'Masdon ENT & Facial Plastic Surgery LLC Masdon ENT Hearing Aids', addr: '55 Rowe Dr Ste B, Guntersville, AL 35976', phone: '(256) 571-8450', lat: 34.36008, lng: -86.29865 },
+  { id: 'al-new-143', chain: null, chainName: null, name: 'Carrie Melissa May', addr: '1110 Dr Edward Hillard Dr, Tuscaloosa, AL 35401', phone: '(205) 759-1279', lat: 33.20964, lng: -87.5619 },
+  { id: 'al-new-144', chain: null, chainName: null, name: 'Robert Dick Mcclung', addr: '244 Inverness Center Dr Suite 100, Birmingham, AL 35242', phone: '(205) 637-0731', lat: 33.52345, lng: -86.81774 },
+  { id: 'al-new-145', chain: null, chainName: null, name: 'Lori G. Mccollum', addr: '3368 Highway 280 Suite G-15, Alexander City, AL 35010', phone: '(256) 329-1114', lat: 32.94293, lng: -85.95762 },
+  { id: 'al-new-146', chain: null, chainName: null, name: 'Madison Paige Mccullough', addr: '423 Medical Center Dr SW, Fort Payne, AL 35968', phone: '(256) 844-8144', lat: 34.43735, lng: -85.71482 },
+  { id: 'al-new-147', chain: null, chainName: null, name: 'Jennifer Mcinnish', addr: '833 Princeton Ave SW Ste 200B, Birmingham, AL 35211', phone: '(205) 783-7421', lat: 33.52052, lng: -86.81468 },
+  { id: 'al-new-148', chain: null, chainName: null, name: 'Vulcan Audiology', addr: '2017 Canyon Rd Ste 17, Vestavia Hills, AL 35216', phone: '(205) 482-0991', lat: 33.45218, lng: -86.78687 },
+  { id: 'al-new-149', chain: null, chainName: null, name: 'Modern Hearing Aid Center INC. East Alabama Hearing Clinic', addr: '115 Court St N Suite B, Talladega, AL 35160', phone: '(256) 362-0037', lat: 33.43489, lng: -86.11463 },
+  { id: 'al-new-150', chain: null, chainName: null, name: 'Robert Moore', addr: 'Dept of Speech Pathology and Audiology Hahn 1119, University of South Alabama, Mobile, AL 36688', phone: '(251) 445-9359', lat: 30.68945, lng: -88.033 },
+  { id: 'al-new-151', chain: null, chainName: null, name: 'USA Health Physician Billing Services LLC', addr: '5721 USA Drive North Hahn 1119, Mobile, AL 36608', phone: '(251) 445-9378', lat: 30.70106, lng: -88.03908 },
+  { id: 'al-new-152', chain: null, chainName: null, name: 'Laura C Mount', addr: '602 Corley Ave, Boaz, AL 35957', phone: '(256) 571-8450', lat: 34.20418, lng: -86.16401 },
+  { id: 'al-new-153', chain: null, chainName: null, name: 'Candice P Mullen', addr: '1610 Center St Ste A, Mobile, AL 36604', phone: '(251) 432-4560', lat: 30.69047, lng: -88.04661 },
+  { id: 'al-new-154', chain: null, chainName: null, name: 'Brad Murphree', addr: '303 Williams Ave SW Suite 1111, Huntsville, AL 35801', phone: '(256) 536-7405', lat: 34.72772, lng: -86.57892 },
+  { id: 'al-new-155', chain: null, chainName: null, name: 'Angela P. Naccari', addr: '4624 Summit Cv, Birmingham, AL 35226', phone: '(205) 987-8369', lat: 33.52275, lng: -86.80391 },
+  { id: 'al-new-156', chain: null, chainName: null, name: 'Naro Audiology & Hearing Solutions LLC', addr: '1305 Mcmillan Ave, Brewton, AL 36426', phone: '(251) 937-8240', lat: 31.11098, lng: -87.07742 },
+  { id: 'al-new-157', chain: null, chainName: null, name: 'Nautilus Hearing', addr: '8230-C Spanish Fort Blvd, Spanish Fort, AL 36527', phone: '(251) 205-7343', lat: 30.67219, lng: -87.92245 },
+  { id: 'al-new-158', chain: null, chainName: null, name: 'Gretchen L Nelson (+1 audiologists)', addr: '833 Saint Vincents Dr Suite 402, Birmingham, AL 35205', phone: '(205) 933-9236', lat: 33.52252, lng: -86.80349 },
+  { id: 'al-new-159', chain: null, chainName: null, name: 'Amy C Nichols', addr: '5721 USA Dr N, Mobile, AL 36688', phone: '(251) 445-9378', lat: 30.69409, lng: -88.03773 },
+  { id: 'al-new-160', chain: null, chainName: null, name: 'Northeast Alabama Audiology Clinic', addr: '313 S 4Th St, Gadsden, AL 35901', phone: '(256) 543-8899', lat: 34.00946, lng: -85.99886 },
+  { id: 'al-new-161', chain: null, chainName: null, name: 'Northland Hearing Centers, INC. Pattillo Balance & Hearing Center', addr: '2685 Pelham Parkway Suite A, Pelham, AL 35124', phone: '(205) 620-6047', lat: 33.2907, lng: -86.80143 },
+  { id: 'al-new-162', chain: null, chainName: null, name: 'Alison Norwood', addr: '1717 6Th Ave S, Birmingham, AL 35233', phone: '(800) 822-8816', lat: 33.52295, lng: -86.80353 },
+  { id: 'al-new-163', chain: null, chainName: null, name: 'Lauren Toohey Nye', addr: '48 Medical Park Dr E Suite 153, Birmingham, AL 35235', phone: '(205) 838-3755', lat: 33.51195, lng: -86.80614 },
+  { id: 'al-new-164', chain: null, chainName: null, name: 'Carrie Overschmidt', addr: '1610 Center St Ste. A, Mobile, AL 36604', phone: '(251) 432-4560', lat: 30.69305, lng: -88.03215 },
+  { id: 'al-new-165', chain: null, chainName: null, name: 'Felicia C. Owens', addr: '833 Saint Vincents Dr Pob 3, Suite 402, Birmingham, AL 35205', phone: '(205) 933-9236', lat: 33.52283, lng: -86.80385 },
+  { id: 'al-new-166', chain: null, chainName: null, name: 'Joanne Payne', addr: '608 Kirkwood Dr, Northport, AL 35473', phone: '(205) 333-0942', lat: 33.23335, lng: -87.5814 },
+  { id: 'al-new-167', chain: null, chainName: null, name: 'Kimberly Dawn Payne', addr: '1010 Christine Ave Suite 250, Anniston, AL 36207', phone: '(256) 235-3050', lat: 33.66382, lng: -85.83865 },
+  { id: 'al-new-168', chain: null, chainName: null, name: 'Anne K Penhale', addr: '985 Ninth Avenue S W Suite 308, Bessemer, AL 35022', phone: '(205) 481-7780', lat: 33.40701, lng: -86.94795 },
+  { id: 'al-new-169', chain: null, chainName: null, name: 'Physicians Hearing Center', addr: '2030 Cecil Ashburn Dr SE Suite 100 - A, Huntsville, AL 35802', phone: '(256) 535-9038', lat: 34.72651, lng: -86.5804 },
+  { id: 'al-new-170', chain: null, chainName: null, name: 'Preferred Hearing Solutions', addr: '3784 Pepperell Pkwy, Opelika, AL 36801', phone: '(334) 603-0700', lat: 32.64484, lng: -85.38181 },
+  { id: 'al-new-171', chain: null, chainName: null, name: 'Allyson Leigh Rainer', addr: '5646 Old Pascagoula Rd Suite B, Mobile, AL 36619', phone: '(251) 653-1112', lat: 30.69953, lng: -88.0448 },
+  { id: 'al-new-172', chain: null, chainName: null, name: 'Restore Aspire', addr: '575 Southland Dr, Vestavia Hills, AL 35226', phone: '(205) 942-6820', lat: 33.44213, lng: -86.79332 },
+  { id: 'al-new-173', chain: null, chainName: null, name: 'Restore Therapy Services, Ltd Thrive Huntsville', addr: '2238 Cecil Ashburn Dr SE, Huntsville, AL 35802', phone: '(205) 942-6820', lat: 34.728, lng: -86.57954 },
+  { id: 'al-new-174', chain: null, chainName: null, name: 'Restore Therapy Services, Ltd Restore Birmingham', addr: '285 W Oxmoor Rd, Birmingham, AL 35209', phone: '(205) 942-6820', lat: 33.52514, lng: -86.81438 },
+  { id: 'al-new-175', chain: null, chainName: null, name: 'Restore Therapy Services, Ltd Restore Huntsville', addr: '2061 Poole Drive, Huntsville, AL 35810', phone: '(205) 942-6820', lat: 34.73238, lng: -86.58791 },
+  { id: 'al-new-176', chain: null, chainName: null, name: 'Restore Therapy Services, Ltd Restore Tuscaloosa', addr: '1801 Rice Mine Rd N, Tuscaloosa, AL 35406', phone: '(205) 942-6820', lat: 33.21654, lng: -87.56855 },
+  { id: 'al-new-177', chain: null, chainName: null, name: 'Restore Therapy Services, Ltd Restore Vestavia', addr: '300 Royal Tower Dr, Homewood, AL 35209', phone: '(205) 942-6820', lat: 33.47955, lng: -86.80782 },
+  { id: 'al-new-178', chain: null, chainName: null, name: 'Restore Therapy Services, Ltd Restore Spanish Fort', addr: '500 Spanish Fort Blvd, Spanish Fort, AL 36527', phone: '(205) 942-6820', lat: 30.68229, lng: -87.92109 },
+  { id: 'al-new-179', chain: null, chainName: null, name: 'Restore Therapy Services, Ltd Restore River Highlands', addr: '1851 Data Dr, Hoover, AL 35244', phone: '(205) 942-6820', lat: 33.41188, lng: -86.81562 },
+  { id: 'al-new-180', chain: null, chainName: null, name: 'Restore Therapy Services, Ltd. Restore Therapy Services Outpatient', addr: '401 Arnold St NE, Cullman, AL 35055', phone: '(256) 737-9495', lat: 34.16932, lng: -86.84458 },
+  { id: 'al-new-181', chain: null, chainName: null, name: 'Laura Brown Rhodes', addr: '700 South 19Th Street (05-4T), Birmingham, AL 35233', phone: '(205) 933-8101', lat: 33.5218, lng: -86.81375 },
+  { id: 'al-new-182', chain: null, chainName: null, name: 'Georgia W Rhodes', addr: '2906 Citizens Pkwy, Selma, AL 36701', phone: '(334) 300-2691', lat: 32.40889, lng: -87.02089 },
+  { id: 'al-new-183', chain: null, chainName: null, name: 'Melissa Richardson', addr: '330 Trace Ridge Rd, Hoover, AL 35244', phone: '(205) 789-4772', lat: 33.40379, lng: -86.81002 },
+  { id: 'al-new-184', chain: null, chainName: null, name: 'Karla Gann Robinson', addr: '3701 Loop Rd Tuscaloosa VA Medical Center, Tuscaloosa, AL 35404', phone: '(205) 554-2822', lat: 33.20637, lng: -87.56544 },
+  { id: 'al-new-185', chain: null, chainName: null, name: 'Mary Katherine Russell', addr: '5721 USA Dr N 1119 Hahn, Mobile, AL 36688', phone: '(251) 445-9378', lat: 30.68842, lng: -88.03224 },
+  { id: 'al-new-186', chain: null, chainName: null, name: 'Abby Nicole Ryan (+1 audiologists)', addr: '2700 10Th Ave S Ste 502, Birmingham, AL 35205', phone: '(205) 933-2951', lat: 33.51914, lng: -86.80645 },
+  { id: 'al-new-187', chain: null, chainName: null, name: 'Savannah Anne Sampson', addr: '2415 7Th Ave S, Birmingham, AL 35233', phone: '(259) 933-8101', lat: 33.52199, lng: -86.80733 },
+  { id: 'al-new-188', chain: null, chainName: null, name: 'Sallie Wynne Segrest', addr: '271 Cherokee Trl, Tallassee, AL 36078', phone: '(662) 832-1136', lat: 32.5346, lng: -85.89964 },
+  { id: 'al-new-189', chain: null, chainName: null, name: 'Alice Marlane Sette', addr: '203 Stonehaven Ct, Dothan, AL 36305', phone: '(334) 792-4891', lat: 31.2255, lng: -85.39356 },
+  { id: 'al-new-190', chain: null, chainName: null, name: 'Keragan Elizabeth Sheffield', addr: '412 Saraland Blvd N, Saraland, AL 36571', phone: '(251) 586-8795', lat: 30.81789, lng: -88.06404 },
+  { id: 'al-new-191', chain: null, chainName: null, name: 'Alison Faith Sims', addr: '244 Inverness Center Dr Ste 100, Birmingham, AL 35242', phone: '(205) 637-0731', lat: 33.52168, lng: -86.81399 },
+  { id: 'al-new-192', chain: null, chainName: null, name: 'Kayla Smith', addr: '3000 Meadow Lake Dr Ste 108, Birmingham, AL 35242', phone: '(205) 739-2242', lat: 33.51593, lng: -86.81205 },
+  { id: 'al-new-193', chain: null, chainName: null, name: 'South Alabama Hearing and Tinnitus Center, LLC', addr: '8154 State Highway 59 Ste 202, Foley, AL 36535', phone: '(251) 971-1152', lat: 30.40543, lng: -87.68728 },
+  { id: 'al-new-194', chain: null, chainName: null, name: 'Southeastern Hearing Services, INC.', addr: '2308B 6Th St, Tuscaloosa, AL 35401', phone: '(205) 391-9876', lat: 33.20458, lng: -87.57063 },
+  { id: 'al-new-195', chain: null, chainName: null, name: 'Rebecca M. Spadoni', addr: '2018 Brookwood Medical Ctr Dr Suite 110, Birmingham, AL 35209', phone: '(205) 877-2705', lat: 33.52477, lng: -86.80721 },
+  { id: 'al-new-196', chain: null, chainName: null, name: 'Candace Jennette Staed', addr: 'Ro44 Spain Rehabilitation Center 1717 6Th Avenue South, Birmingham, AL 35249', phone: '(205) 934-4816', lat: 33.52424, lng: -86.80832 },
+  { id: 'al-new-197', chain: null, chainName: null, name: 'Suzanne S Stanford', addr: '1722 Pine St Suite 804, Montgomery, AL 36106', phone: '(334) 834-7221', lat: 32.36401, lng: -86.29914 },
+  { id: 'al-new-198', chain: null, chainName: null, name: 'Mindy A Stejskal', addr: '1302 Us Highway 98, Daphne, AL 36526', phone: '(251) 410-9000', lat: 30.59651, lng: -87.90744 },
+  { id: 'al-new-199', chain: null, chainName: null, name: 'Debrah Lynn K Stewart', addr: '1429 Hamric Dr E, Oxford, AL 36203', phone: '(256) 831-2292', lat: 33.61332, lng: -85.83356 },
+  { id: 'al-new-200', chain: null, chainName: null, name: 'Amy Botts Strickland', addr: '2163 Normandie Dr, Montgomery, AL 36111', phone: '(334) 284-1870', lat: 32.36897, lng: -86.30063 },
+  { id: 'al-new-201', chain: null, chainName: null, name: 'Shaye Sullivan', addr: '644 2Nd St NE Ste 107, Alabaster, AL 35007', phone: '(205) 621-2020', lat: 33.24319, lng: -86.82155 },
+  { id: 'al-new-202', chain: null, chainName: null, name: 'Tamatha Sullivan Davidson', addr: '188 Hospital Dr Ste 101, Fairhope, AL 36532', phone: '(251) 928-0300', lat: 30.52252, lng: -87.89608 },
+  { id: 'al-new-203', chain: null, chainName: null, name: 'Joni Renea Talton', addr: '1717 6Th Ave S Ro 44 Src, Birmingham, AL 35233', phone: '(205) 934-4816', lat: 33.52274, lng: -86.81635 },
+  { id: 'al-new-204', chain: null, chainName: null, name: 'Victoria Mock Taylor', addr: '112 Haven Dr Ste 1, Dothan, AL 36301', phone: '(337) 793-6673', lat: 31.21739, lng: -85.39022 },
+  { id: 'al-new-205', chain: null, chainName: null, name: 'The Arc of Walker County', addr: '910 Oakhill Rd, Jasper, AL 35504', phone: '(205) 387-0564', lat: 33.83316, lng: -87.28057 },
+  { id: 'al-new-206', chain: null, chainName: null, name: 'Brianna Landers Thomas', addr: '8075 Madison Blvd Ste 108, Madison, AL 35758', phone: '(256) 489-0903', lat: 34.70376, lng: -86.74378 },
+  { id: 'al-new-207', chain: null, chainName: null, name: 'Charlotte Lynn Thompson', addr: '108 Sequoia Ct, Prattville, AL 36067', phone: '(334) 361-5453', lat: 32.46642, lng: -86.46466 },
+  { id: 'al-new-208', chain: null, chainName: null, name: 'Trina Gould Thompson', addr: '419 Jane Rd Apt. 2, Troy, AL 36079', phone: '(334) 447-9139', lat: 31.80449, lng: -85.97856 },
+  { id: 'al-new-209', chain: null, chainName: null, name: 'Andrea Lamendola Thompson', addr: '610 Providence Park Dr E Bldg. 2 Suite 202, Mobile, AL 36695', phone: '(251) 633-2667', lat: 30.69183, lng: -88.04035 },
+  { id: 'al-new-210', chain: null, chainName: null, name: 'Dana S Tulloss', addr: '1228 1St St N, Alabaster, AL 35007', phone: '(205) 621-8900', lat: 33.2489, lng: -86.82409 },
+  { id: 'al-new-211', chain: null, chainName: null, name: 'Heather Howell Tyldesley', addr: '833 Saint Vincents Dr Pob#3 Ste 402, Birmingham, AL 35205', phone: '(205) 933-9236', lat: 33.5174, lng: -86.80806 },
+  { id: 'al-new-212', chain: null, chainName: null, name: 'USA Health Community Providers LLC', addr: '6801 Airport Blvd, Mobile, AL 36608', phone: '(251) 266-3580', lat: 30.69112, lng: -88.03637 },
+  { id: 'al-new-213', chain: null, chainName: null, name: 'Valleydale Hearing & Balance Center', addr: '250 Inverness Center Dr. Suite C, Birmingham, AL 35242', phone: '(205) 936-3001', lat: 33.51852, lng: -86.81501 },
+  { id: 'al-new-214', chain: null, chainName: null, name: 'Pamela Dyas Vautier', addr: '6701 Airport Blvd Suite B-123, Mobile, AL 36608', phone: '(251) 689-3241', lat: 30.69758, lng: -88.0488 },
+  { id: 'al-new-215', chain: null, chainName: null, name: 'Dana Mccraw Walchek', addr: '832 Princeton Ave SW, Birmingham, AL 35211', phone: '(205) 206-8471', lat: 33.52211, lng: -86.80554 },
+  { id: 'al-new-216', chain: null, chainName: null, name: 'Lee Helen Weeks', addr: '913 Cottage Hill Ave, Mobile, AL 36693', phone: '(251) 509-5868', lat: 30.68989, lng: -88.04125 },
+  { id: 'al-new-217', chain: null, chainName: null, name: 'Jennifer L. Wesley', addr: '795 Ross Clark Cir, Dothan, AL 36303', phone: '(334) 699-6600', lat: 31.21866, lng: -85.38226 },
+  { id: 'al-new-218', chain: null, chainName: null, name: 'Randall Wilks', addr: '1218 13Th Ave SE, Decatur, AL 35601', phone: '(256) 355-6200', lat: 34.60615, lng: -86.9914 },
+  { id: 'al-new-219', chain: null, chainName: null, name: 'Nikki Kay Williams', addr: '833 Saint Vincents Dr Pob#3 Suite 402, Birmingham, AL 35205', phone: '(205) 933-9236', lat: 33.51509, lng: -86.80413 },
+  { id: 'al-new-220', chain: null, chainName: null, name: 'Peyton Williams', addr: '1720 Center St Ste 103, Mobile, AL 36604', phone: '(251) 415-1475', lat: 30.69479, lng: -88.03447 },
+  { id: 'al-new-221', chain: null, chainName: null, name: 'Kayla Willis', addr: '560 Westgate Pkwy Ste 4, Dothan, AL 36303', phone: '(229) 220-9936', lat: 31.22555, lng: -85.38172 },
+  { id: 'al-new-222', chain: null, chainName: null, name: 'Latrelle Zorn Wilson', addr: '2163 Normandie Drive, Montgomery, AL 36111', phone: '(334) 284-1870', lat: 32.36814, lng: -86.2919 },
+  { id: 'al-new-223', chain: null, chainName: null, name: 'Woolley Institute for Spoken-Language Education', addr: '2305 Montevallo Road, Birmingham, AL 35223', phone: '(205) 728-5480', lat: 33.52408, lng: -86.80837 },
+  { id: 'al-new-224', chain: null, chainName: null, name: 'Ellie J Young', addr: '301 Andrew Ave, Fort Rucker, AL 36362', phone: '(334) 255-7838', lat: 31.35077, lng: -85.71351 }
+];
+
+// =========== ATLANTA / GEORGIA DATASET ===========
+const GA_HEARING_CENTERS = [
+  // Atlanta Hearing Associates locations
+  { id: 'ga-aha-1', chain: 'atlanta_hearing_associates', chainName: 'Atlanta Hearing Associates', name: 'Atlanta Hearing Associates – Dunwoody', addr: '1713 Mt Vernon Rd Suite 4, Dunwoody, GA 30338', phone: '(770) 394-9499', lat: 33.9465992, lng: -84.3303543 },
+  { id: 'ga-aha-2', chain: 'atlanta_hearing_associates', chainName: 'Atlanta Hearing Associates', name: 'Atlanta Hearing Associates – Decatur', addr: '1270 McConnell Dr Suite D, Decatur, GA 30033', phone: '(404) 500-1026', lat: 33.8098784, lng: -84.308227 },
+
+  // Beltone / American Hearing Care (powered by Beltone)
+  { id: 'ga-blt-1', chain: 'beltone', chainName: 'Beltone', name: 'American Hearing Care – Chamblee (Beltone)', addr: '4360 Chamblee Dunwoody Rd #180, Atlanta, GA 30341', phone: '(470) 210-3260', lat: 33.917927, lng: -84.3166101 },
+  { id: 'ga-blt-2', chain: 'beltone', chainName: 'Beltone', name: 'Beltone Hearing Aid Center – Marietta', addr: '2230 Roswell Rd Ste 110, Marietta, GA 30062', phone: '(770) 872-0204', lat: 33.9713585, lng: -84.486921 },
+  { id: 'ga-blt-3', chain: 'beltone', chainName: 'Beltone', name: 'American Hearing Care – Tucker (Beltone)', addr: '4450 Hugh Howell Rd Ste. #5, Tucker, GA 30084', phone: '(205) 270-7966', lat: 33.8503889, lng: -84.2058601 },
+  { id: 'ga-blt-4', chain: 'beltone', chainName: 'Beltone', name: 'Beltone Hearing Aid Center – Douglasville', addr: '7421 Douglas Blvd Suite F, Douglasville, GA 30135', phone: '(770) 872-0211', lat: 33.7240957, lng: -84.7674146 },
+  { id: 'ga-blt-5', chain: 'beltone', chainName: 'Beltone', name: 'Beltone Hearing Aid Center – Peachtree City', addr: '227 Market Place Connector, Peachtree City, GA 30269', phone: '(770) 872-0067', lat: 33.3981131, lng: -84.5957273 },
+  { id: 'ga-blt-6', chain: 'beltone', chainName: 'Beltone', name: 'Beltone Hearing Aid Center – McDonough', addr: '1048 Avalon Pkwy, McDonough, GA 30253', phone: '(770) 872-4495', lat: 33.4232021, lng: -84.1832037 },
+  { id: 'ga-blt-7', chain: 'beltone', chainName: 'Beltone', name: 'American Hearing Care – Kennesaw (Beltone)', addr: '4430 Wade Green Rd NW Suite 50, Kennesaw, GA 30144', phone: '(706) 237-2235', lat: 34.0610353, lng: -84.5908412 },
+  { id: 'ga-blt-8', chain: 'beltone', chainName: 'Beltone', name: 'Beltone Hearing Aid Center – Lawrenceville', addr: '601-A Professional Dr #280, Lawrenceville, GA 30046', phone: '(770) 872-0103', lat: 33.9639921, lng: -84.0125231 },
+
+  // Miracle-Ear
+  { id: 'ga-mir-1', chain: 'miracle_ear', chainName: 'Miracle-Ear', name: 'Miracle-Ear Hearing Aid Center – Henderson Mill', addr: '2114 Henderson Mill Rd, Atlanta, GA 30345', phone: '(770) 575-8672', lat: 33.846307, lng: -84.256957 },
+
+  // HearUSA
+  { id: 'ga-hua-1', chain: 'hearusa', chainName: 'HearUSA', name: 'HearUSA – Sandy Springs', addr: '6018 Sandy Springs Cir, Atlanta, GA 30328', phone: '(404) 256-5194', lat: 33.920594, lng: -84.38536 },
+  { id: 'ga-hua-2', chain: 'hearusa', chainName: 'HearUSA', name: 'HearUSA – Buckhead', addr: '2140 Peachtree Rd # 350, Atlanta, GA 30309', phone: '(404) 351-4114', lat: 33.8128562, lng: -84.3938023 },
+
+  // HearingLife
+  { id: 'ga-hl-1', chain: 'hearinglife', chainName: 'HearingLife', name: 'HearingLife of Smyrna GA', addr: '4585 S Cobb Dr SE #300/400, Smyrna, GA 30080', phone: '(470) 795-7151', lat: 33.842593, lng: -84.498166 },
+
+  // Atlanta ENT, Sinus & Allergy Associates (multi-location)
+  { id: 'ga-aent-1', chain: 'atlanta_ent', chainName: 'Atlanta ENT, Sinus & Allergy Associates', name: 'Atlanta ENT – Sandy Springs', addr: '5555 Peachtree Dunwoody Rd NE # 125, Atlanta, GA 30342', phone: '(404) 255-2918', lat: 33.9057, lng: -84.352067 },
+  { id: 'ga-aent-2', chain: 'atlanta_ent', chainName: 'Atlanta ENT, Sinus & Allergy Associates', name: 'Atlanta ENT – Executive Park', addr: '17 Executive Park S # 250, Atlanta, GA 30329', phone: '(678) 904-4390', lat: 33.8278323, lng: -84.3390613 },
+
+  // Single-location practices
+  { id: 'ga-sgl-ahd', chain: null, chainName: null, name: 'Atlanta Hearing Doctor', addr: '5885 Glenridge Dr #155, Atlanta, GA 30328', phone: '(404) 252-7528', lat: 33.9163612, lng: -84.3593362 },
+  { id: 'ga-sgl-ahc', chain: null, chainName: null, name: 'Advanced Hearing Centers', addr: '960 Johnson Ferry Rd NE #144, Atlanta, GA 30342', phone: '(404) 924-4510', lat: 33.9080656, lng: -84.3561009 },
+  { id: 'ga-sgl-tch', chain: null, chainName: null, name: 'The Hearing Center at Eye Consultants of Atlanta', addr: '3225 Cumberland Blvd SE #175, Atlanta, GA 30339', phone: '(404) 998-8822', lat: 33.8778052, lng: -84.4610923 },
+  { id: 'ga-sgl-mw', chain: null, chainName: null, name: 'Monica Walker Audiology', addr: '5252 Roswell Rd UNIT 202, Atlanta, GA 30342', phone: '(404) 777-5252', lat: 33.8983284, lng: -84.3818478 },
+  { id: 'ga-sgl-ghc', chain: null, chainName: null, name: 'Georgia Hearing Clinic', addr: '3160 Northside Pkwy NW Suite A, Atlanta, GA 30327', phone: '(404) 591-5134', lat: 33.841547, lng: -84.422384 },
+  { id: 'ga-sgl-ecg', chain: null, chainName: null, name: 'Ear Consultants of Georgia', addr: '5881 Glenridge Dr #230, Atlanta, GA 30328', phone: '(404) 943-0170', lat: 33.9167404, lng: -84.3617515 },
+  { id: 'ga-sgl-gphs', chain: null, chainName: null, name: "Georgia's Premier Hearing Solutions", addr: '1800 Peachtree Rd # 650, Atlanta, GA 30309', phone: '(470) 344-9626', lat: 33.803629, lng: -84.3940247 },
+
+  // ENT practices (audiology services)
+  { id: 'ga-sgl-pent', chain: null, chainName: null, name: 'Piedmont Ear, Nose, Throat & Related Allergy', addr: '1720 Peachtree St NW Suite 200, Atlanta, GA 30309', phone: '(404) 351-5045', lat: 33.8010531, lng: -84.3931619 },
+  { id: 'ga-sgl-nwent', chain: null, chainName: null, name: 'Northwest ENT and Allergy Center', addr: '2061 Peachtree Rd NW STE 300, Atlanta, GA 30309', phone: '(770) 427-0368', lat: 33.8111603, lng: -84.3920815 },
+  { id: 'ga-sgl-sent', chain: null, chainName: null, name: 'ENT Associates of South Atlanta', addr: '1151 Cleveland Ave STE C, East Point, GA 30344', phone: '(404) 768-9350', lat: 33.6818564, lng: -84.4264877 },
+  { id: 'ga-sgl-nsent', chain: null, chainName: null, name: 'Northside ENT Specialists – Brookhaven', addr: '3929 Peachtree Rd NE Unit 100, Atlanta, GA 30319', phone: '(770) 740-1860', lat: 33.8573831, lng: -84.3424502 },
+  { id: 'ga-sgl-engd', chain: null, chainName: null, name: 'ENT of Georgia North – Decatur', addr: '484 Irvin Ct #140, Decatur, GA 30030', phone: '(404) 297-4230', lat: 33.790248, lng: -84.278426 },
+  { id: 'ga-sgl-aent', chain: null, chainName: null, name: 'Advanced Ear, Nose, Throat & Allergy', addr: '960 Johnson Ferry Rd NE #200, Atlanta, GA 30342', phone: '(404) 943-0900', lat: 33.908063, lng: -84.356185 }
+];
+
+const STORAGE_KEY = 'jims_prospector_v7';
+
+let app = {
+  center: { lat: 33.4488, lng: -86.7878, label: 'Vestavia Hills, AL' },
+  radius: 30,
+  locations: [],
+  status: {},
+  filter: 'all',
+  search: '',
+  route: [] // array of location ids in order
+};
+
+let map, markers = {}, radiusCircle, centerMarker, chainColors = {};
+
+// Initial load: filter Alabama dataset by initial radius
+function buildInitialLocations() {
+  return AL_HEARING_CENTERS.filter(l =>
+    haversineMi(app.center.lat, app.center.lng, l.lat, l.lng) <= app.radius
+  );
+}
+
+async function loadState() {
+  try {
+    const raw = await Store.get(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (saved.center) app.center = saved.center;
+      if (saved.radius != null) app.radius = saved.radius;
+      if (saved.locations && saved.locations.length) app.locations = saved.locations;
+      if (saved.status) app.status = saved.status;
+      if (saved.route) app.route = saved.route;
+    }
+  } catch(e) {}
+
+  if (!app.locations.length) {
+    app.locations = buildInitialLocations();
+  }
+
+  app.locations.forEach(l => {
+    if (!app.status[l.id]) app.status[l.id] = { checked: false, notes: '' };
+  });
+}
+
+let saveTimer;
+async function saveState(immediate = false) {
+  clearTimeout(saveTimer);
+  const doSave = async () => {
+    try {
+      await Store.set(STORAGE_KEY, JSON.stringify({
+        center: app.center, radius: app.radius,
+        locations: app.locations, status: app.status,
+        route: app.route
+      }));
+      if (immediate) toast('Saved');
+    } catch(e) { toast('Save failed', true); }
+  };
+  if (immediate) await doSave();
+  else saveTimer = setTimeout(doSave, 600);
+}
+
+function initMap() {
+  map = L.map('map', { zoomControl: true, preferCanvas: false })
+    .setView([app.center.lat, app.center.lng], 10);
+
+  // OSM default tiles - most universally accessible. CSS filter makes them dark.
+  const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    subdomains: 'abc',
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+    crossOrigin: true
+  });
+
+  let tileErrors = 0;
+  let switched = false;
+  tileLayer.on('tileerror', () => {
+    tileErrors++;
+    if (tileErrors > 3 && !switched) {
+      switched = true;
+      console.warn('OSM tiles failed, trying CartoDB fallback');
+      map.removeLayer(tileLayer);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+        subdomains: 'abcd',
+        attribution: '© OSM © CARTO',
+        maxZoom: 19
+      }).addTo(map);
+      document.body.classList.remove('osm-dark-filter');
+    }
+  });
+
+  tileLayer.addTo(map);
+  document.body.classList.add('osm-dark-filter');
+
+  [50, 200, 500, 1000].forEach(d => setTimeout(() => map.invalidateSize(), d));
+  window.addEventListener('resize', () => map.invalidateSize());
+
+  drawCenter();
+  drawRadiusCircle();
+  drawAllMarkers();
+  fitToData();
+}
+
+function drawCenter() {
+  if (centerMarker) map.removeLayer(centerMarker);
+  const icon = L.divIcon({
+    className: '', html: '<div class="center-pin"></div>',
+    iconSize: [16, 16], iconAnchor: [8, 8]
+  });
+  centerMarker = L.marker([app.center.lat, app.center.lng], { icon, zIndexOffset: 1000 }).addTo(map);
+  centerMarker.bindPopup(`<div class="pop-name">${escapeHtml(app.center.label)}</div><div class="pop-meta">Search center · ${app.radius}-mile radius</div>`);
+}
+
+function drawRadiusCircle() {
+  if (radiusCircle) map.removeLayer(radiusCircle);
+  if (app.radius <= 0) return;
+  radiusCircle = L.circle([app.center.lat, app.center.lng], {
+    radius: app.radius * 1609.344,
+    color: '#FF7A00', weight: 1.5, opacity: 0.55,
+    fillColor: '#FF7A00', fillOpacity: 0.05,
+    dashArray: '4,6', interactive: false
+  }).addTo(map);
+}
+
+function drawAllMarkers() {
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+
+  const chainKeys = [...new Set(app.locations.map(l => l.chain).filter(Boolean))];
+  chainColors = {};
+  chainKeys.forEach((k, i) => chainColors[k] = CHAIN_PALETTE[i % CHAIN_PALETTE.length]);
+
+  app.locations.forEach(loc => {
+    const color = loc.chain ? chainColors[loc.chain] : '#8E8E93';
+    const checked = app.status[loc.id]?.checked;
+    const routeIdx = app.route.indexOf(loc.id);
+    const m = L.marker([loc.lat, loc.lng], { icon: makeMarkerIcon(color, checked, routeIdx) });
+    m.bindPopup(makePopup(loc));
+    m.addTo(map);
+    markers[loc.id] = m;
+  });
+}
+
+function makeMarkerIcon(color, checked, routeIdx) {
+  const inRoute = routeIdx >= 0;
+  const numAttr = inRoute ? `data-num="${routeIdx + 1}"` : '';
+  const cls = `marker-pin ${checked ? 'checked' : ''} ${inRoute ? 'in-route' : ''}`;
+  return L.divIcon({
+    className: '',
+    html: `<div class="${cls}" ${numAttr} style="background:${color};"></div>`,
+    iconSize: [24, 24], iconAnchor: [12, 24], popupAnchor: [0, -22]
+  });
+}
+
+function makePopup(loc) {
+  const phone = loc.phone ? `<div class="pop-meta">📞 <a href="tel:${loc.phone.replace(/\D/g,'')}">${escapeHtml(loc.phone)}</a></div>` : '';
+  const chain = loc.chainName ? `<div class="pop-chain">${escapeHtml(loc.chainName)}</div>` : '';
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.addr)}`;
+  return `
+    <div class="pop-name">${escapeHtml(loc.name)}</div>
+    ${chain}
+    <div class="pop-meta">📍 ${escapeHtml(loc.addr)}</div>
+    ${phone}
+    <div style="margin-top:8px;">
+      <a href="${mapsUrl}" target="_blank" rel="noopener" style="color:#FFA500; font-weight:600;">→ Open in Google Maps</a>
+    </div>`;
+}
+
+function updateMarker(loc) {
+  const m = markers[loc.id]; if (!m) return;
+  const color = loc.chain ? chainColors[loc.chain] : '#8E8E93';
+  const routeIdx = app.route.indexOf(loc.id);
+  m.setIcon(makeMarkerIcon(color, app.status[loc.id]?.checked, routeIdx));
+}
+
+function fitToData() {
+  const pts = [[app.center.lat, app.center.lng], ...app.locations.map(l => [l.lat, l.lng])];
+  if (pts.length > 1) {
+    map.fitBounds(pts, { padding: [40, 40], maxZoom: 12 });
+  } else {
+    const rad = Math.max(app.radius, 5) * 1609.344;
+    const bounds = L.latLng(app.center.lat, app.center.lng).toBounds(rad * 2);
+    map.fitBounds(bounds, { padding: [20, 20] });
+  }
+}
+
+function renderList() {
+  const list = document.getElementById('list');
+  const filtered = app.locations.filter(loc => {
+    if (app.filter === 'chains' && !loc.chain) return false;
+    if (app.filter === 'unchecked' && app.status[loc.id]?.checked) return false;
+    if (app.filter === 'checked' && !app.status[loc.id]?.checked) return false;
+    if (app.search) {
+      const q = app.search.toLowerCase();
+      if (!loc.name.toLowerCase().includes(q) &&
+          !loc.addr.toLowerCase().includes(q) &&
+          !(loc.phone || '').includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('list-count').textContent = `${filtered.length} location${filtered.length === 1 ? '' : 's'}`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty">No locations match your filters.<br>Try widening the radius, changing the address, or use ＋ Add Location.</div>`;
+    return;
+  }
+
+  const groups = {};
+  filtered.forEach(loc => {
+    const key = loc.chain || '__single';
+    if (!groups[key]) groups[key] = { name: loc.chainName || 'Single Locations', items: [], chain: loc.chain };
+    groups[key].items.push(loc);
+  });
+
+  const entries = Object.entries(groups)
+    .filter(([k]) => k !== '__single')
+    .sort((a, b) => b[1].items.length - a[1].items.length);
+  if (groups['__single']) entries.push(['__single', groups['__single']]);
+
+  let html = '';
+  entries.forEach(([key, grp]) => {
+    const color = grp.chain ? chainColors[grp.chain] : '#8E8E93';
+    const isMulti = key !== '__single' && grp.items.length > 1;
+    html += `
+      <div class="group">
+        <div class="group-title">
+          <div class="group-dot" style="background:${color}; color:${color}"></div>
+          <div class="name">${escapeHtml(grp.name)}</div>
+          ${isMulti ? `<span class="multi-badge">${grp.items.length} locs</span>` : ''}
+          <span class="grp-count">${grp.items.length}</span>
+        </div>
+        <div class="cards">${grp.items.map(renderCard).join('')}</div>
+      </div>`;
+  });
+  list.innerHTML = html;
+  attachCardEvents();
+}
+
+function renderCard(loc) {
+  const s = app.status[loc.id] || { checked: false, notes: '' };
+  const inRoute = app.route.includes(loc.id);
+  const phone = loc.phone
+    ? `<div class="row"><span class="icn">📞</span><a href="tel:${loc.phone.replace(/\D/g,'')}">${escapeHtml(loc.phone)}</a></div>`
+    : `<div class="row" style="color:var(--text-mute);"><span class="icn">📞</span>—</div>`;
+  return `
+    <div class="card ${s.checked ? 'checked' : ''} ${inRoute ? 'in-route' : ''}" data-id="${loc.id}">
+      <div class="card-head">
+        <button type="button" class="visited-btn ${s.checked ? 'visited' : ''}" data-action="toggle" data-id="${loc.id}" aria-pressed="${s.checked ? 'true' : 'false'}">
+          ${s.checked ? '✓ Visited' : 'Visited'}
+        </button>
+        <div class="card-name" data-action="focus" data-id="${loc.id}">${escapeHtml(loc.name)}</div>
+      </div>
+      <div class="card-meta">
+        <div class="row"><span class="icn">📍</span><span>${escapeHtml(loc.addr)}</span></div>
+        ${phone}
+      </div>
+      <div class="card-actions">
+        <button class="btn sm ${inRoute ? 'in-route' : ''}" data-action="route" data-id="${loc.id}">
+          ${inRoute ? '✓ In Route' : '＋ Route'}
+        </button>
+        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.addr)}" target="_blank" rel="noopener noreferrer" class="btn sm">🗺 Maps</a>
+        <button class="btn sm" data-action="focus" data-id="${loc.id}">📍 Show</button>
+        <button class="btn sm" data-action="delete" data-id="${loc.id}">🗑</button>
+      </div>
+      <textarea class="notes-input" data-action="notes" data-id="${loc.id}" placeholder="Notes (contact name, follow-up, status…)" rows="1">${escapeHtml(s.notes || '')}</textarea>
+    </div>`;
+}
+
+function attachCardEvents() {
+  document.querySelectorAll('[data-action="toggle"]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = el.dataset.id;
+      app.status[id].checked = !app.status[id].checked;
+      saveState();
+      renderList();
+      updateMarker(app.locations.find(l => l.id === id));
+      updateStats();
+    });
+  });
+  document.querySelectorAll('[data-action="focus"]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = el.dataset.id;
+      const loc = app.locations.find(l => l.id === id);
+      if (!loc) return;
+      map.flyTo([loc.lat, loc.lng], 15, { duration: 0.7 });
+      setTimeout(() => markers[id]?.openPopup(), 700);
+    });
+  });
+  document.querySelectorAll('[data-action="route"]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = el.dataset.id;
+      toggleRouteStop(id);
+    });
+  });
+  document.querySelectorAll('[data-action="delete"]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = el.dataset.id;
+      if (!confirm('Remove this location from the list?')) return;
+      app.locations = app.locations.filter(l => l.id !== id);
+      delete app.status[id];
+      const ri = app.route.indexOf(id);
+      if (ri >= 0) app.route.splice(ri, 1);
+      if (markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+      saveState();
+      renderList();
+      renderRoute();
+      updateStats();
+    });
+  });
+  document.querySelectorAll('[data-action="notes"]').forEach(el => {
+    el.addEventListener('input', () => {
+      app.status[el.dataset.id].notes = el.value;
+      saveState();
+    });
+    el.addEventListener('click', e => e.stopPropagation());
+  });
+}
+
+function updateStats() {
+  const cc = app.locations.filter(l => app.status[l.id]?.checked).length;
+  document.getElementById('stat-checked').textContent = cc;
+  document.getElementById('stat-total').textContent = app.locations.length;
+}
+
+// =========== ROUTE PLANNER ===========
+function toggleRouteStop(id) {
+  const idx = app.route.indexOf(id);
+  if (idx >= 0) {
+    app.route.splice(idx, 1);
+  } else {
+    if (app.route.length >= 10) {
+      toast('Google Maps supports up to 10 stops', true);
+      return;
+    }
+    app.route.push(id);
+  }
+  saveState();
+  renderRoute();
+  renderList();
+  // Refresh affected markers
+  drawAllMarkers();
+}
+
+function moveRouteStop(id, direction) {
+  const idx = app.route.indexOf(id);
+  if (idx < 0) return;
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= app.route.length) return;
+  [app.route[idx], app.route[newIdx]] = [app.route[newIdx], app.route[idx]];
+  saveState();
+  renderRoute();
+  drawAllMarkers();
+}
+
+function renderRoute() {
+  const stopsEl = document.getElementById('route-stops');
+  const countEl = document.getElementById('route-overlay-count');
+  const sidebarBadge = document.getElementById('route-open-badge');
+  const exportBtn = document.getElementById('route-export');
+  const copyBtn = document.getElementById('route-copy');
+  const clearBtn = document.getElementById('route-clear');
+
+  const n = app.route.length;
+  if (countEl) countEl.textContent = `${n} stop${n === 1 ? '' : 's'}`;
+  if (sidebarBadge) sidebarBadge.textContent = String(n);
+
+  if (n === 0) {
+    exportBtn.classList.add('disabled');
+    exportBtn.setAttribute('href', '#');
+    copyBtn.disabled = true;
+    clearBtn.disabled = true;
+  } else {
+    exportBtn.classList.remove('disabled');
+    exportBtn.setAttribute('href', buildRouteUrl());
+    copyBtn.disabled = false;
+    clearBtn.disabled = false;
+  }
+
+  if (n === 0) {
+    stopsEl.innerHTML = `<div class="route-empty">No stops added yet. Tap <strong style="color:var(--blue-light);">＋ Route</strong> on any prospect card to start building your route. You can add up to 10 stops.</div>`;
+    return;
+  }
+
+  // Always show the starting address as the first (fixed) entry in the route
+  let html = `
+    <div class="route-stop route-stop-start">
+      <div class="num start-num">⌂</div>
+      <div class="name start-name">
+        <span class="start-label">Start</span>
+        <span class="start-addr">${escapeHtml(app.center.label || 'Starting location')}</span>
+      </div>
+    </div>`;
+
+  app.route.forEach((id, i) => {
+    const loc = app.locations.find(l => l.id === id);
+    if (!loc) return;
+    const isFirst = i === 0;
+    const isLast = i === app.route.length - 1;
+    html += `
+      <div class="route-stop">
+        <div class="num">${i + 1}</div>
+        <div class="name" title="${escapeHtml(loc.addr)}">${escapeHtml(loc.name)}</div>
+        <button type="button" class="route-stop-btn" data-route-action="up" data-id="${id}" title="Move up" aria-label="Move up"${isFirst ? ' disabled' : ''}>↑</button>
+        <button type="button" class="route-stop-btn" data-route-action="down" data-id="${id}" title="Move down" aria-label="Move down"${isLast ? ' disabled' : ''}>↓</button>
+        <button type="button" class="route-stop-btn remove" data-route-action="remove" data-id="${id}" title="Remove from route" aria-label="Remove from route">×</button>
+      </div>`;
+  });
+  stopsEl.innerHTML = html;
+}
+
+function buildRouteUrl() {
+  if (app.route.length === 0) return '#';
+  const stops = app.route.map(id => app.locations.find(l => l.id === id)).filter(Boolean);
+  if (stops.length === 0) return '#';
+
+  // Origin is always the user's starting location (lat,lng for reliability —
+  // works for typed addresses, geocoded results, AND "My Location" geolocation)
+  const origin = `${app.center.lat},${app.center.lng}`;
+
+  if (stops.length === 1) {
+    // Just origin → that one stop
+    const destination = encodeURIComponent(stops[0].addr);
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+  }
+
+  // Multiple stops: origin → all-but-last as waypoints → last as destination
+  const destination = encodeURIComponent(stops[stops.length - 1].addr);
+  const waypoints = stops.slice(0, -1).map(s => encodeURIComponent(s.addr)).join('|');
+
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+  if (waypoints) url += `&waypoints=${waypoints}`;
+  return url;
+}
+
+async function copyRouteUrl() {
+  const url = buildRouteUrl();
+  if (url === '#') { toast('Add stops to the route first', true); return; }
+
+  // Try navigator.clipboard first
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+      toast(`URL copied (${app.route.length} stops) — paste into your browser`);
+      return;
+    }
+  } catch (e) {}
+
+  // Fallback: hidden textarea + execCommand
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok) {
+      toast(`URL copied (${app.route.length} stops)`);
+      return;
+    }
+  } catch (e) {}
+
+  // Last resort: show URL in a prompt for manual copy
+  prompt('Copy this URL and open it in your browser:', url);
+}
+
+let clearRouteArmed = false;
+let clearRouteTimer = null;
+
+function clearRoute() {
+  if (app.route.length === 0) return;
+
+  const btn = document.getElementById('route-clear');
+  if (!btn) return;
+
+  if (!clearRouteArmed) {
+    // First tap — arm and prompt for confirmation tap
+    clearRouteArmed = true;
+    btn.textContent = '⚠ Tap again to confirm';
+    btn.classList.add('danger');
+    clearRouteTimer = setTimeout(() => {
+      clearRouteArmed = false;
+      btn.textContent = 'Clear Route';
+      btn.classList.remove('danger');
+    }, 3000);
+    return;
+  }
+
+  // Second tap within 3s — actually clear
+  clearTimeout(clearRouteTimer);
+  clearRouteArmed = false;
+  app.route = [];
+  saveState();
+  renderRoute();
+  renderList();
+  drawAllMarkers();
+  toast('Route cleared');
+}
+
+// =========== GEOCODING + SEARCH ===========
+// Pre-geocoded Alabama cities (no network needed for in-state searches)
+const AL_CITIES = {
+  'vestavia hills': { lat: 33.4488, lng: -86.7878, label: 'Vestavia Hills, AL' },
+  'birmingham': { lat: 33.5186, lng: -86.8104, label: 'Birmingham, AL' },
+  'huntsville': { lat: 34.7304, lng: -86.5861, label: 'Huntsville, AL' },
+  'mobile': { lat: 30.6954, lng: -88.0399, label: 'Mobile, AL' },
+  'montgomery': { lat: 32.3792, lng: -86.3077, label: 'Montgomery, AL' },
+  'tuscaloosa': { lat: 33.2098, lng: -87.5692, label: 'Tuscaloosa, AL' },
+  'auburn': { lat: 32.6099, lng: -85.4808, label: 'Auburn, AL' },
+  'opelika': { lat: 32.6454, lng: -85.3783, label: 'Opelika, AL' },
+  'dothan': { lat: 31.2232, lng: -85.3905, label: 'Dothan, AL' },
+  'hoover': { lat: 33.4054, lng: -86.8114, label: 'Hoover, AL' },
+  'florence': { lat: 34.7998, lng: -87.6773, label: 'Florence, AL' },
+  'decatur': { lat: 34.6059, lng: -86.9833, label: 'Decatur, AL' },
+  'madison': { lat: 34.6993, lng: -86.7483, label: 'Madison, AL' },
+  'gadsden': { lat: 34.0143, lng: -86.0066, label: 'Gadsden, AL' },
+  'cullman': { lat: 34.1748, lng: -86.8434, label: 'Cullman, AL' },
+  'pelham': { lat: 33.2856, lng: -86.8100, label: 'Pelham, AL' },
+  'bessemer': { lat: 33.4018, lng: -86.9544, label: 'Bessemer, AL' },
+  'mountain brook': { lat: 33.4884, lng: -86.7385, label: 'Mountain Brook, AL' },
+  'homewood': { lat: 33.4734, lng: -86.8009, label: 'Homewood, AL' },
+  'trussville': { lat: 33.6204, lng: -86.6088, label: 'Trussville, AL' },
+  'alabaster': { lat: 33.2440, lng: -86.8164, label: 'Alabaster, AL' },
+  'oxford': { lat: 33.6143, lng: -85.8350, label: 'Oxford, AL' },
+  'anniston': { lat: 33.6598, lng: -85.8316, label: 'Anniston, AL' },
+  'jasper': { lat: 33.8313, lng: -87.2776, label: 'Jasper, AL' },
+  'prattville': { lat: 32.4640, lng: -86.4597, label: 'Prattville, AL' },
+  'daphne': { lat: 30.6035, lng: -87.9036, label: 'Daphne, AL' },
+  'fairhope': { lat: 30.5229, lng: -87.9033, label: 'Fairhope, AL' },
+  'foley': { lat: 30.4068, lng: -87.6836, label: 'Foley, AL' },
+  'selma': { lat: 32.4074, lng: -87.0211, label: 'Selma, AL' },
+  'athens': { lat: 34.8023, lng: -86.9722, label: 'Athens, AL' },
+  'scottsboro': { lat: 34.6724, lng: -86.0341, label: 'Scottsboro, AL' },
+  'gardendale': { lat: 33.6612, lng: -86.8133, label: 'Gardendale, AL' },
+  'millbrook': { lat: 32.4795, lng: -86.3617, label: 'Millbrook, AL' },
+  'joppa': { lat: 34.2898, lng: -86.5494, label: 'Joppa, AL' },
+  'muscle shoals': { lat: 34.7448, lng: -87.6675, label: 'Muscle Shoals, AL' },
+  'tuscumbia': { lat: 34.7311, lng: -87.7025, label: 'Tuscumbia, AL' },
+  'albertville': { lat: 34.2676, lng: -86.2089, label: 'Albertville, AL' },
+  'guntersville': { lat: 34.3582, lng: -86.2944, label: 'Guntersville, AL' },
+  'fort payne': { lat: 34.4443, lng: -85.7197, label: 'Fort Payne, AL' },
+  'phenix city': { lat: 32.4709, lng: -85.0008, label: 'Phenix City, AL' },
+  'enterprise': { lat: 31.3152, lng: -85.8552, label: 'Enterprise, AL' },
+  'troy': { lat: 31.8087, lng: -85.9700, label: 'Troy, AL' },
+  'hueytown': { lat: 33.4523, lng: -86.9978, label: 'Hueytown, AL' },
+  'helena': { lat: 33.2962, lng: -86.8436, label: 'Helena, AL' },
+  'chelsea': { lat: 33.3393, lng: -86.6358, label: 'Chelsea, AL' },
+  // Georgia / Atlanta metro
+  'atlanta': { lat: 33.7490, lng: -84.3880, label: 'Atlanta, GA' },
+  'atlanta ga': { lat: 33.7490, lng: -84.3880, label: 'Atlanta, GA' },
+  'marietta': { lat: 33.9526, lng: -84.5499, label: 'Marietta, GA' },
+  'sandy springs': { lat: 33.9304, lng: -84.3733, label: 'Sandy Springs, GA' },
+  'roswell': { lat: 34.0232, lng: -84.3616, label: 'Roswell, GA' },
+  'alpharetta': { lat: 34.0754, lng: -84.2941, label: 'Alpharetta, GA' },
+  'dunwoody': { lat: 33.9462, lng: -84.3346, label: 'Dunwoody, GA' },
+  'smyrna': { lat: 33.8840, lng: -84.5144, label: 'Smyrna, GA' },
+  'kennesaw': { lat: 34.0234, lng: -84.6155, label: 'Kennesaw, GA' },
+  'lawrenceville': { lat: 33.9562, lng: -83.9879, label: 'Lawrenceville, GA' },
+  'duluth': { lat: 34.0029, lng: -84.1446, label: 'Duluth, GA' },
+  'tucker': { lat: 33.8546, lng: -84.2173, label: 'Tucker, GA' },
+  'douglasville': { lat: 33.7515, lng: -84.7477, label: 'Douglasville, GA' },
+  'mcdonough': { lat: 33.4473, lng: -84.1469, label: 'McDonough, GA' },
+  'peachtree city': { lat: 33.3968, lng: -84.5957, label: 'Peachtree City, GA' },
+  'east point': { lat: 33.6795, lng: -84.4394, label: 'East Point, GA' },
+  'brookhaven': { lat: 33.8651, lng: -84.3360, label: 'Brookhaven, GA' },
+  'augusta': { lat: 33.4735, lng: -82.0105, label: 'Augusta, GA' },
+  'savannah': { lat: 32.0809, lng: -81.0912, label: 'Savannah, GA' },
+  'macon': { lat: 32.8407, lng: -83.6324, label: 'Macon, GA' },
+  'columbus ga': { lat: 32.4610, lng: -84.9877, label: 'Columbus, GA' },
+  'athens ga': { lat: 33.9519, lng: -83.3576, label: 'Athens, GA' }
+};
+
+async function geocode(query) {
+  // Normalize: lowercase, strip state suffix (", AL", ", GA", etc.), strip commas, collapse spaces
+  const norm = query.trim().toLowerCase()
+    .replace(/,\s*(al(abama)?|ga|georgia)$/i, '')
+    .replace(/,/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Try built-in city table first (no network needed)
+  if (AL_CITIES[norm]) {
+    return AL_CITIES[norm];
+  }
+
+  // Fall through to Nominatim for anything else
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) throw new Error('Geocoding service returned ' + r.status);
+    const data = await r.json();
+    if (!data || !data.length) throw new Error('Address not found');
+    return {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon),
+      label: data[0].display_name.split(',').slice(0, 3).join(', ')
+    };
+  } catch (e) {
+    throw new Error(`Could not look up "${query}". Try a major city name (Birmingham, Atlanta, Huntsville, Mobile, etc.) or check your internet connection.`);
+  }
+}
+
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.openstreetmap.fr/api/interpreter'
+];
+
+async function findCentersOSM(lat, lng, radiusMi) {
+  const radiusM = Math.round(radiusMi * 1609.344);
+  // Cast a wide net — hearing centers are tagged inconsistently across regions
+  const query = `
+[out:json][timeout:25];
+(
+  nwr["shop"="hearing_aids"](around:${radiusM},${lat},${lng});
+  nwr["healthcare"="audiologist"](around:${radiusM},${lat},${lng});
+  nwr["healthcare:speciality"~"audiolog|ear|hearing|ent|otolaryngolog",i](around:${radiusM},${lat},${lng});
+  nwr["amenity"="clinic"]["healthcare:speciality"~"audiolog|ear|hearing|ent|otolaryngolog",i](around:${radiusM},${lat},${lng});
+  nwr["office"="physician"]["healthcare:speciality"~"audiolog|ear|hearing|ent|otolaryngolog",i](around:${radiusM},${lat},${lng});
+  nwr["name"~"hearing|audiolog|otolaryng|miracle.?ear|beltone|hearinglife|audibel",i](around:${radiusM},${lat},${lng});
+  nwr["brand"~"miracle.?ear|beltone|hearinglife|audibel|connect.?hearing",i](around:${radiusM},${lat},${lng});
+);
+out center tags;
+`.trim();
+
+  const errors = [];
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      // GET requests have better cross-browser/CORS compatibility than POST
+      const url = endpoint + '?data=' + encodeURIComponent(query);
+      // Per-endpoint timeout so we fail fast and try the next mirror
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 20000);
+      const r = await fetch(url, { method: 'GET', signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!r.ok) {
+        errors.push(`${endpoint.replace(/^https?:\/\//, '').split('/')[0]}: HTTP ${r.status}`);
+        continue;
+      }
+      const data = await r.json();
+      const parsed = parseOverpassResults(data.elements || []);
+      // De-duplicate (same place can match multiple union clauses)
+      const seen = new Set();
+      const unique = parsed.filter(loc => {
+        if (seen.has(loc.id)) return false;
+        seen.add(loc.id);
+        return true;
+      });
+      return unique;
+    } catch (e) {
+      const reason = e.name === 'AbortError' ? 'timed out' : (e.message || 'failed');
+      errors.push(`${endpoint.replace(/^https?:\/\//, '').split('/')[0]}: ${reason}`);
+    }
+  }
+  throw new Error('OpenStreetMap unreachable. ' + errors.join(' | '));
+}
+
+function parseOverpassResults(elements) {
+  return elements.map((el, i) => {
+    const t = el.tags || {};
+    const lat = el.lat || el.center?.lat;
+    const lng = el.lon || el.center?.lon;
+    if (lat == null || lng == null) return null;
+
+    const name = t.name || t.brand || t.operator || 'Unnamed location';
+    const streetParts = [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ');
+    const cityState = [t['addr:city'], t['addr:state'], t['addr:postcode']].filter(Boolean).join(', ');
+    const fullAddr = [streetParts, cityState].filter(Boolean).join(', ') || (t['addr:full'] || '');
+    const phone = t.phone || t['contact:phone'] || '';
+
+    let chain = null, chainName = null;
+    const brand = t.brand || t.operator;
+    if (brand) {
+      chain = brand.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      chainName = brand;
+    }
+
+    return {
+      id: `osm-${el.type}-${el.id}`,
+      name, addr: fullAddr || '(address not in OpenStreetMap)',
+      phone, lat, lng, chain, chainName
+    };
+  }).filter(Boolean);
+}
+
+async function runFindAtCoords(geo) {
+  app.center = { lat: geo.lat, lng: geo.lng, label: geo.label };
+  map.setView([geo.lat, geo.lng], 10);
+  drawCenter();
+  drawRadiusCircle();
+
+  try {
+    let found;
+    let sourceLabel;
+    if (isInAlabama(geo.lat, geo.lng)) {
+      showLoading(`Loading Alabama hearing centers within ${app.radius} miles…`);
+      found = AL_HEARING_CENTERS.filter(l =>
+        haversineMi(geo.lat, geo.lng, l.lat, l.lng) <= app.radius
+      );
+      sourceLabel = 'Alabama dataset';
+    } else if (isInGeorgia(geo.lat, geo.lng)) {
+      showLoading(`Loading Georgia hearing centers within ${app.radius} miles…`);
+      found = GA_HEARING_CENTERS.filter(l =>
+        haversineMi(geo.lat, geo.lng, l.lat, l.lng) <= app.radius
+      );
+      sourceLabel = 'Georgia dataset';
+    } else {
+      showLoading(`Searching OpenStreetMap within ${app.radius} miles…`);
+      found = await findCentersOSM(geo.lat, geo.lng, app.radius);
+      sourceLabel = 'OpenStreetMap';
+    }
+
+    // Always preserve manually added locations
+    const manual = app.locations.filter(l => l.id.startsWith('manual-'));
+    const merged = [...manual];
+    const seenIds = new Set(manual.map(l => l.id));
+    found.forEach(l => {
+      if (!seenIds.has(l.id)) { merged.push(l); seenIds.add(l.id); }
+    });
+
+    if (merged.length === 0) {
+      toast('No locations found. Try a wider radius or add manually.', true);
+      return;
+    }
+
+    const oldStatus = app.status;
+    app.locations = merged;
+    const newStatus = {};
+    merged.forEach(l => newStatus[l.id] = oldStatus[l.id] || { checked: false, notes: '' });
+    app.status = newStatus;
+    app.route = app.route.filter(id => merged.find(l => l.id === id));
+
+    drawAllMarkers();
+    fitToData();
+    renderList();
+    renderRoute();
+    updateStats();
+    saveState(true);
+    toast(`Found ${found.length} location${found.length === 1 ? '' : 's'} (${sourceLabel})`);
+  } catch (e) {
+    console.error(e);
+    toast(`Search failed: ${e.message}`, true);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function runFind() {
+  const addr = document.getElementById('address-input').value.trim();
+  if (!addr) { toast('Enter an address first', true); return; }
+
+  showLoading('Geocoding address…');
+  try {
+    const geo = await geocode(addr);
+    await runFindAtCoords(geo);
+  } catch (e) {
+    hideLoading();
+    toast(e.message, true);
+  }
+}
+
+function useCurrentLocation() {
+  if (!navigator.geolocation) {
+    toast('Your browser doesn\'t support geolocation', true);
+    return;
+  }
+  showLoading('Getting your location…');
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      document.getElementById('address-input').value = 'My Location';
+      await runFindAtCoords({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        label: 'My Location'
+      });
+    },
+    (err) => {
+      hideLoading();
+      let msg = 'Could not get your location';
+      if (err.code === err.PERMISSION_DENIED) {
+        msg = 'Location permission denied. Allow location access in your browser settings.';
+      } else if (err.code === err.POSITION_UNAVAILABLE) {
+        msg = 'Location unavailable. Try entering an address manually.';
+      } else if (err.code === err.TIMEOUT) {
+        msg = 'Location request timed out. Try again.';
+      }
+      toast(msg, true);
+    },
+    { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+  );
+}
+
+async function submitAdd() {
+  const name = document.getElementById('add-name').value.trim();
+  const addr = document.getElementById('add-addr').value.trim();
+  const phone = document.getElementById('add-phone').value.trim();
+  const chainName = document.getElementById('add-chain').value.trim();
+
+  if (!name) { toast('Name is required', true); return; }
+  if (!addr) { toast('Address is required', true); return; }
+
+  closeModal();
+  showLoading('Geocoding address…');
+  try {
+    const geo = await geocode(addr);
+    const id = `manual-${Date.now()}`;
+    const chain = chainName ? chainName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') : null;
+    const loc = {
+      id, name, addr, phone,
+      lat: geo.lat, lng: geo.lng,
+      chain, chainName: chainName || null
+    };
+    app.locations.push(loc);
+    app.status[id] = { checked: false, notes: '' };
+    drawAllMarkers();
+    renderList();
+    updateStats();
+    saveState(true);
+    map.flyTo([loc.lat, loc.lng], 15, { duration: 0.7 });
+    setTimeout(() => markers[id]?.openPopup(), 700);
+    toast(`Added: ${name}`);
+  } catch (e) {
+    toast(`Could not geocode address: ${e.message}`, true);
+  } finally { hideLoading(); }
+}
+
+function openModal() {
+  document.getElementById('add-modal').classList.add('visible');
+  document.getElementById('add-name').focus();
+}
+function closeModal() {
+  document.getElementById('add-modal').classList.remove('visible');
+  ['add-name', 'add-addr', 'add-phone', 'add-chain'].forEach(id => document.getElementById(id).value = '');
+}
+
+function showLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('map-loading').classList.add('visible');
+}
+function hideLoading() { document.getElementById('map-loading').classList.remove('visible'); }
+
+let toastTimer;
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', isError);
+  t.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('visible'), 2800);
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function exportCSV() {
+  const rows = [['Visited', 'Route Order', 'Chain', 'Name', 'Address', 'Phone', 'Notes', 'Latitude', 'Longitude', 'Distance (mi)']];
+  app.locations.forEach(l => {
+    const s = app.status[l.id] || {};
+    const dist = haversineMi(app.center.lat, app.center.lng, l.lat, l.lng).toFixed(1);
+    const routeIdx = app.route.indexOf(l.id);
+    rows.push([
+      s.checked ? 'Yes' : 'No',
+      routeIdx >= 0 ? (routeIdx + 1) : '',
+      l.chainName || '',
+      l.name, l.addr, l.phone,
+      (s.notes || '').replace(/\n/g, ' '),
+      l.lat, l.lng, dist
+    ]);
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const filename = `prospector_${new Date().toISOString().slice(0, 10)}.csv`;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+  // iOS Safari ignores the download attribute and navigates to the blob URL (white screen).
+  // Use Web Share API on mobile (opens native share sheet → save to Files, email, etc.)
+  if (navigator.canShare && typeof File !== 'undefined') {
+    try {
+      const file = new File([blob], filename, { type: 'text/csv' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: "Jim's Prospector Export" })
+          .then(() => toast('CSV shared'))
+          .catch(err => {
+            if (err && err.name !== 'AbortError') fallbackCsvDownload(blob, filename, csv);
+          });
+        return;
+      }
+    } catch (e) { /* fall through */ }
+  }
+
+  fallbackCsvDownload(blob, filename, csv);
+}
+
+function fallbackCsvDownload(blob, filename, csvText) {
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 200);
+    toast('CSV downloaded');
+  } catch (e) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(csvText)
+        .then(() => toast('CSV copied to clipboard — paste into a spreadsheet'))
+        .catch(() => prompt('Copy CSV from below:', csvText));
+    } else {
+      prompt('Copy CSV from below:', csvText);
+    }
+  }
+}
+
+function haversineMi(lat1, lng1, lat2, lng2) {
+  const R = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) ** 2 +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+            Math.sin(dLng/2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function setupEvents() {
+  document.getElementById('address-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); runFind(); }
+  });
+  document.getElementById('find-btn').addEventListener('click', runFind);
+  document.getElementById('locate-btn').addEventListener('click', useCurrentLocation);
+
+  document.getElementById('add-btn').addEventListener('click', openModal);
+  document.getElementById('add-cancel').addEventListener('click', closeModal);
+  document.getElementById('add-submit').addEventListener('click', submitAdd);
+  document.getElementById('add-modal').addEventListener('click', e => {
+    if (e.target.id === 'add-modal') closeModal();
+  });
+
+  const slider = document.getElementById('radius-slider');
+  slider.addEventListener('input', e => {
+    app.radius = parseInt(e.target.value, 10);
+    document.getElementById('radius-val').textContent = app.radius;
+    drawRadiusCircle();
+    if (centerMarker) {
+      centerMarker.setPopupContent(`<div class="pop-name">${escapeHtml(app.center.label)}</div><div class="pop-meta">Search center · ${app.radius}-mile radius</div>`);
+    }
+  });
+  slider.addEventListener('change', () => saveState());
+
+  // Filter dropdown (custom <details>, no native iOS picker)
+  const filterDetails = document.getElementById('filter-details');
+  const filterCurrent = document.getElementById('filter-current');
+  const filterLabelMap = { all: 'All', chains: 'Chains', unchecked: 'Not Visited', checked: 'Visited' };
+  // Init from saved state
+  filterCurrent.textContent = filterLabelMap[app.filter] || 'All';
+  document.querySelectorAll('.filter-option').forEach(opt => {
+    if (opt.dataset.filter === app.filter) opt.classList.add('active');
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.filter-option').forEach(x => x.classList.remove('active'));
+      opt.classList.add('active');
+      app.filter = opt.dataset.filter;
+      filterCurrent.textContent = filterLabelMap[app.filter] || 'All';
+      filterDetails.open = false;
+      saveState();
+      renderList();
+    });
+  });
+  // Close dropdown when tapping outside
+  document.addEventListener('click', e => {
+    if (filterDetails.open && !filterDetails.contains(e.target)) {
+      filterDetails.open = false;
+    }
+  });
+
+  document.getElementById('search').addEventListener('input', e => {
+    app.search = e.target.value;
+    renderList();
+  });
+
+  document.getElementById('save-btn').addEventListener('click', () => saveState(true));
+  document.getElementById('export-csv').addEventListener('click', exportCSV);
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (!confirm('Clear all visited markers, notes, and route stops?')) return;
+    app.locations.forEach(l => app.status[l.id] = { checked: false, notes: '' });
+    app.route = [];
+    saveState(true);
+    renderList();
+    renderRoute();
+    drawAllMarkers();
+    updateStats();
+    toast('Reset complete');
+  });
+
+  document.getElementById('route-copy').addEventListener('click', copyRouteUrl);
+  document.getElementById('route-clear').addEventListener('click', clearRoute);
+
+  // Route overlay open/close
+  const routeOpenBtn = document.getElementById('route-open');
+  const routeBackBtn = document.getElementById('route-back');
+  const routeOverlay = document.getElementById('route-overlay');
+  routeOpenBtn.addEventListener('click', () => {
+    routeOverlay.classList.add('visible');
+  });
+  routeBackBtn.addEventListener('click', () => {
+    routeOverlay.classList.remove('visible');
+  });
+
+  // Event delegation for route stop reorder/remove buttons (works across re-renders)
+  const stopsContainer = document.getElementById('route-stops');
+  stopsContainer.addEventListener('click', e => {
+    const btn = e.target.closest('[data-route-action]');
+    if (!btn) return;
+    if (btn.hasAttribute('disabled')) return;
+    const id = btn.dataset.id;
+    const action = btn.dataset.routeAction;
+    if (action === 'up') moveRouteStop(id, -1);
+    else if (action === 'down') moveRouteStop(id, 1);
+    else if (action === 'remove') toggleRouteStop(id);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('add-modal').classList.contains('visible')) {
+        closeModal();
+      } else if (document.getElementById('route-overlay').classList.contains('visible')) {
+        document.getElementById('route-overlay').classList.remove('visible');
+      }
+    }
+  });
+}
+
+(async function() {
+  try {
+    if (typeof L === 'undefined') {
+      throw new Error('Map library (Leaflet) failed to load. Check internet connection or try refreshing.');
+    }
+    await loadState();
+    document.getElementById('radius-slider').value = app.radius;
+    document.getElementById('radius-val').textContent = app.radius;
+    document.getElementById('address-input').value = app.center.label;
+    initMap();
+    renderList();
+    renderRoute();
+    updateStats();
+    setupEvents();
+  } catch (err) {
+    console.error('Init failed:', err);
+    const mapEl = document.getElementById('map');
+    if (mapEl) {
+      mapEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:20px;text-align:center;color:#FFA500;font-size:14px;line-height:1.5;">⚠️ ${err.message}<br><br><small style="color:#888;">Check the browser console for details (F12 → Console).</small></div>`;
+    }
+    toast(`Error: ${err.message}`, true);
+  }
+})();
+</script>
+</body>
+</html>
